@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ROIDER Color Palette */
+  --primary-burgundy: rgb(159, 31, 92);
+  --primary-burgundy-light: rgb(105, 34, 71);
+  --dark-burgundy: rgb(65, 21, 39);
+  --accent-pink: rgb(133, 30, 90);
+  --muted-purple: rgb(97, 74, 104);
+  --muted-purple-light: rgb(79, 61, 91);
+  --muted-mauve: rgb(122, 71, 105);
+
+  --background: #fafaf9;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --border: #e7e5e4;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Vazirmatn', system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+html[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Glass Morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(159, 31, 92, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(159, 31, 92, 0.2);
+}
+
+/* Smooth transitions */
+a,
+button,
+input,
+select,
+textarea {
+  transition: all 0.3s ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-burgundy);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-burgundy-light);
+}
