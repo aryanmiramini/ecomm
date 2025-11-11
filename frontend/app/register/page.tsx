@@ -19,7 +19,7 @@ export default function RegisterPage() {
     firstName: "",
     lastName: "",
     email: "",
-    phoneNumber: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   })
@@ -36,14 +36,22 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await apiEndpoints.register({
+      // Register user
+      await apiEndpoints.register({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        phoneNumber: formData.phoneNumber,
+        phone: formData.phone,
         password: formData.password,
       })
-      const { access_token, user } = response.data
+      
+      // Auto-login after registration
+      const loginResponse = await apiEndpoints.login({
+        email: formData.email,
+        password: formData.password,
+      })
+      
+      const { access_token, user } = loginResponse.data
       setAuth(access_token, user)
       router.push("/")
     } catch (err: any) {
@@ -54,13 +62,17 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl p-8 glass">
-          <h1 className="text-3xl font-bold mb-2 text-center">{t("register") || "Register"}</h1>
-          <p className="text-gray-600 text-center mb-8">
-            {t("registerSubtitle") || "Create a new account to get started"}
-          </p>
+        <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-[rgb(159,31,92)] to-[rgb(133,30,90)] bg-clip-text text-transparent">
+              {t("register") || "Register"}
+            </h1>
+            <p className="text-gray-600">
+              {t("registerSubtitle") || "Create a new account to get started"}
+            </p>
+          </div>
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -117,8 +129,8 @@ export default function RegisterPage() {
                 <input
                   type="tel"
                   required
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(159,31,92)]"
                   placeholder="+98 912 345 6789"
                 />
@@ -165,7 +177,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[rgb(159,31,92)] text-white rounded-lg font-semibold hover:bg-[rgb(133,30,90)] transition disabled:opacity-50"
+              className="w-full py-3 bg-gradient-to-r from-[rgb(159,31,92)] to-[rgb(133,30,90)] text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? t("loading") || "Loading..." : t("register") || "Register"}
             </button>

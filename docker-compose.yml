@@ -6,7 +6,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-StrongPassword123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ecommerce_db
     ports:
     
@@ -44,7 +44,7 @@ services:
       JWT_EXPIRATION: 1h
       # Kavenegar SMS
       KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY}
-      KAVENEGAR_SENDER: ${KAVENEGAR_SENDER:-10004321}
+      KAVENEGAR_SENDER: ${KAVENEGAR_SENDER}
       # CORS
       FRONTEND_URL: http://localhost:3001
       CORS_ORIGIN: http://localhost:3001,http://localhost:3000
@@ -62,8 +62,7 @@ services:
       - roider-network
     command: >
       sh -c "
-        npx prisma migrate deploy &&
-        npx prisma generate &&
+        prisma migrate deploy &&
         npm run start:prod
       "
 

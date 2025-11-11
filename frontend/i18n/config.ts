@@ -7,7 +7,7 @@ export const translations = {
     home: "خانه",
     products: "محصولات",
     categories: "دسته‌بندی",
-    cart: "سبد خریدی",
+    cart: "سبد خرید",
     account: "حساب کاربری",
     login: "ورود",
     logout: "خروج",
@@ -18,7 +18,6 @@ export const translations = {
     subtitle: "بهترین محصولات با بهترین قیمت",
     exploreNow: "کاوش کنید",
     featuredProducts: "محصولات برتر",
-    allCategories: "تمام دسته‌بندی‌ها",
 
     // Products
     price: "قیمت",
@@ -32,7 +31,9 @@ export const translations = {
     reviews: "نظرات",
 
     // Cart
-    cartEmpty: "سبد خریدی شما خالی است",
+    cartEmpty: "سبد خرید شما خالی است",
+    emptyCart: "سبد خرید شما خالی است",
+    emptyCartMessage: "شروع خرید برای افزودن محصولات به سبد خرید",
     checkout: "پرداخت",
     continue: "ادامه",
     remove: "حذف",
@@ -41,6 +42,12 @@ export const translations = {
     tax: "مالیات",
     shipping: "حمل",
     total: "کل",
+    clearCart: "پاک کردن سبد",
+    proceedToCheckout: "ادامه به پرداخت",
+    continueShopping: "ادامه خرید",
+    confirmClearCart: "آیا مطمئن هستید که می‌خواهید سبد خرید را پاک کنید؟",
+    currency: "تومان",
+    off: "تخفیف",
 
     // Auth
     email: "ایمیل",
@@ -58,6 +65,23 @@ export const translations = {
     error: "خطا",
     loading: "درحال‌بارگذاری",
     noResults: "نتیجه‌ای یافت نشد",
+    retry: "تلاش مجدد",
+    noProducts: "محصولی موجود نیست",
+    featuredProductsSubtitle: "مجموعه منتخب محصولات باکیفیت ما را کشف کنید",
+    browseCategories: "دسته‌بندی‌های گسترده محصولات ما را مرور کنید",
+    sortBy: "مرتب‌سازی",
+    newest: "جدیدترین",
+    popular: "محبوب‌ترین",
+    priceLow: "قیمت: کم به زیاد",
+    priceHigh: "قیمت: زیاد به کم",
+    previous: "قبلی",
+    next: "بعدی",
+    allCategories: "همه دسته‌بندی‌ها",
+    clearFilters: "پاک کردن فیلترها",
+    confirmPassword: "تایید رمز عبور",
+    loginSubtitle: "خوش آمدید! لطفاً وارد حساب کاربری خود شوید",
+    registerSubtitle: "ایجاد حساب کاربری جدید برای شروع",
+    rememberMe: "مرا به خاطر بسپار",
   },
   en: {
     // Navigation
@@ -90,6 +114,8 @@ export const translations = {
 
     // Cart
     cartEmpty: "Your cart is empty",
+    emptyCart: "Your cart is empty",
+    emptyCartMessage: "Start shopping to add items to your cart",
     checkout: "Checkout",
     continue: "Continue",
     remove: "Remove",
@@ -98,6 +124,12 @@ export const translations = {
     tax: "Tax",
     shipping: "Shipping",
     total: "Total",
+    clearCart: "Clear Cart",
+    proceedToCheckout: "Proceed to Checkout",
+    continueShopping: "Continue Shopping",
+    confirmClearCart: "Are you sure you want to clear your cart?",
+    currency: "Toman",
+    off: "OFF",
 
     // Auth
     email: "Email",
@@ -115,5 +147,21 @@ export const translations = {
     error: "Error",
     loading: "Loading",
     noResults: "No results found",
+    retry: "Retry",
+    noProducts: "No products available",
+    featuredProductsSubtitle: "Discover our handpicked selection of premium products",
+    browseCategories: "Browse our wide range of product categories",
+    sortBy: "Sort By",
+    newest: "Newest",
+    popular: "Popular",
+    priceLow: "Price: Low to High",
+    priceHigh: "Price: High to Low",
+    previous: "Previous",
+    next: "Next",
+    clearFilters: "Clear Filters",
+    confirmPassword: "Confirm Password",
+    loginSubtitle: "Welcome back! Please login to your account",
+    registerSubtitle: "Create a new account to get started",
+    rememberMe: "Remember me",
   },
 }

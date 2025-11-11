@@ -5,13 +5,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm ci --only=production && \
-    npm install -g @nestjs/cli && \
-    npm install --save-dev @types/node
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -30,18 +28,28 @@ WORKDIR /app
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
+# Copy package files and install production dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Copy Prisma schema before generating client
+COPY --from=builder /app/prisma ./prisma
+
+# Install Prisma CLI globally and generate Prisma Client
+RUN npm install -g prisma && prisma generate
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # Copy built application
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
-COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
+
+# Ensure runtime user owns app files (including node_modules for any runtime writes)
+RUN chown -R nestjs:nodejs /app
 
 # Switch to non-root user
 USER nestjs

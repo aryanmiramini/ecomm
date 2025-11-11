@@ -30,6 +30,12 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="rgb(159, 31, 92)" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body>
         <I18nProvider locale={locale}>

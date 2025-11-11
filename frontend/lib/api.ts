@@ -80,6 +80,29 @@ export const apiEndpoints = {
   getNotifications: (params?: any) => api.get("/notifications", { params }),
   markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllAsRead: () => api.patch("/notifications/read-all"),
+
+  // Admin endpoints
+  // Products
+  createProduct: (data: any) => api.post("/products", data),
+  updateProduct: (id: string, data: any) => api.patch(`/products/${id}`, data),
+  deleteProduct: (id: string) => api.delete(`/products/${id}`),
+  updateProductInventory: (id: string, quantity: number) => api.patch(`/products/${id}/inventory`, { quantity }),
+  
+  // Categories
+  createCategory: (data: any) => api.post("/products/categories", data),
+  updateCategory: (id: string, data: any) => api.patch(`/products/categories/${id}`, data),
+  deleteCategory: (id: string) => api.delete(`/products/categories/${id}`),
+  
+  // Orders
+  getAllOrders: (params?: any) => api.get("/orders/all", { params }),
+  updateOrderStatus: (id: string, data: any) => api.patch(`/orders/${id}/status`, data),
+  deleteOrder: (id: string) => api.delete(`/orders/${id}`),
+  getOrderStats: () => api.get("/orders/stats/overview"),
+  
+  // Users
+  getAllUsers: () => api.get("/users"),
+  getUserById: (id: string) => api.get(`/users/${id}`),
+  deleteUser: (id: string) => api.delete(`/users/${id}`),
 }
 
 export default api

@@ -38,13 +38,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl p-8 glass">
-          <h1 className="text-3xl font-bold mb-2 text-center">{t("login") || "Login"}</h1>
-          <p className="text-gray-600 text-center mb-8">
-            {t("loginSubtitle") || "Welcome back! Please login to your account"}
-          </p>
+        <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-[rgb(159,31,92)] to-[rgb(133,30,90)] bg-clip-text text-transparent">
+              {t("login") || "Login"}
+            </h1>
+            <p className="text-gray-600">
+              {t("loginSubtitle") || "Welcome back! Please login to your account"}
+            </p>
+          </div>
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -103,7 +107,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[rgb(159,31,92)] text-white rounded-lg font-semibold hover:bg-[rgb(133,30,90)] transition disabled:opacity-50"
+              className="w-full py-3 bg-gradient-to-r from-[rgb(159,31,92)] to-[rgb(133,30,90)] text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? t("loading") || "Loading..." : t("login") || "Login"}
             </button>

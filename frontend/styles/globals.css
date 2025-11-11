@@ -25,9 +25,13 @@
 }
 
 body {
-  font-family: 'Vazirmatn', system-ui, sans-serif;
+  font-family: 'Vazirmatn', 'Vazir', 'Tahoma', system-ui, sans-serif;
   background: var(--background);
   color: var(--foreground);
+  font-feature-settings: 'kern' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html[dir="rtl"] {
@@ -35,8 +39,18 @@ html[dir="rtl"] {
   text-align: right;
 }
 
+html[dir="rtl"] input,
+html[dir="rtl"] textarea {
+  text-align: right;
+}
+
 html[dir="ltr"] {
   direction: ltr;
+  text-align: left;
+}
+
+html[dir="ltr"] input,
+html[dir="ltr"] textarea {
   text-align: left;
 }
 
