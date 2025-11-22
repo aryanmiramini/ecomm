@@ -1,180 +1,173 @@
 "use client"
 
-import { useI18n } from "@/i18n/provider"
 import { useEffect, useState } from "react"
-import { useAuthStore } from "@/store/auth"
-import { useRouter } from "next/navigation"
-import { apiEndpoints } from "@/lib/api"
-import { Edit, Loader2, ShoppingCart } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Eye } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
+import { Skeleton } from "@/components/ui/skeleton"
+import type { Order } from "@/lib/types"
 
-export default function AdminOrdersPage() {
-  const { t } = useI18n()
-  const router = useRouter()
-  const { user } = useAuthStore()
-  const [orders, setOrders] = useState<any[]>([])
+const statusLabels: Record<string, string> = {
+  pending: "در انتظار",
+  processing: "در حال پردازش",
+  shipped: "ارسال شده",
+  delivered: "تحویل داده شده",
+  cancelled: "لغو شده",
+}
+
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-500/10 text-yellow-700",
+  processing: "bg-blue-500/10 text-blue-700",
+  shipped: "bg-purple-500/10 text-purple-700",
+  delivered: "bg-green-500/10 text-green-700",
+  cancelled: "bg-red-500/10 text-red-700",
+}
+
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
-  const [statusFilter, setStatusFilter] = useState("")
 
   useEffect(() => {
-    if (!user || user.role !== "ADMIN") {
-      router.push("/")
-      return
-    }
-
-    const fetchOrders = async () => {
+    async function loadOrders() {
       try {
-        setLoading(true)
-        const response = await apiEndpoints.getAllOrders({ 
-          page, 
-          limit: 20,
-          status: statusFilter || undefined
-        })
-        setOrders(response.data.data || response.data || [])
-        setTotal(response.data.total || 0)
-      } catch (error: any) {
-        console.error("Failed to fetch orders:", error)
+        const response = await apiClient.getOrders()
+        setOrders(response.orders)
+      } catch (error) {
+        console.error("Error loading orders:", error)
       } finally {
         setLoading(false)
       }
     }
+    loadOrders()
+  }, [])
 
-    fetchOrders()
-  }, [user, router, page, statusFilter])
-
-  const getStatusColor = (status: string) => {
-    const colors: any = {
-      PENDING: "bg-yellow-100 text-yellow-700",
-      PROCESSING: "bg-blue-100 text-blue-700",
-      PAID: "bg-green-100 text-green-700",
-      SHIPPED: "bg-purple-100 text-purple-700",
-      DELIVERED: "bg-green-100 text-green-700",
-      CANCELLED: "bg-red-100 text-red-700",
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      await apiClient.updateOrderStatus(orderId, newStatus)
+      setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: newStatus as any } : order)))
+      // Show success message (you can add toast here if needed)
+    } catch (error: any) {
+      console.error("Error updating order status:", error)
+      alert(error.message || "خطا در بروزرسانی وضعیت سفارش")
     }
-    return colors[status] || "bg-gray-100 text-gray-700"
   }
 
-  if (!user || user.role !== "ADMIN") {
-    return null
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[rgb(159,31,92)] to-[rgb(133,30,90)] bg-clip-text text-transparent">
-          Manage Orders
-        </h1>
-        <p className="text-gray-600">View and manage customer orders</p>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">مدیریت سفارشات</h1>
 
-      <div className="mb-6">
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value)
-            setPage(1)
-          }}
-          aria-label="Filter orders by status"
-          className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[rgb(159,31,92)]"
-        >
-          <option value="">All Statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="PROCESSING">Processing</option>
-          <option value="PAID">Paid</option>
-          <option value="SHIPPED">Shipped</option>
-          <option value="DELIVERED">Delivered</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
-      </div>
+      <div className="space-y-4">
+        {orders.map((order) => (
+          <Card key={order.id}>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle>سفارش #{order.id}</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {new Date(order.createdAt).toLocaleDateString("fa-IR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <Badge className={statusColors[order.status]}>{statusLabels[order.status]}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h4 className="mb-2 font-semibold">اطلاعات مشتری</h4>
+                  <div className="space-y-1 text-sm">
+                    <p>نام: {order.customerName}</p>
+                    <p>ایمیل: {order.customerEmail}</p>
+                    <p>تلفن: {order.customerPhone}</p>
+                  </div>
+                </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 size={48} className="text-[rgb(159,31,92)] animate-spin" />
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-20">
-          <ShoppingCart size={64} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600">No orders found</p>
-        </div>
-      ) : (
-        <>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Order ID</th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Customer</th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Total</th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Status</th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Date</th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-mono text-sm text-gray-600">
-                        {order.id?.substring(0, 8) || "N/A"}...
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-gray-900">
-                          {order.user?.firstName || ""} {order.user?.lastName || ""}
-                        </p>
-                        <p className="text-sm text-gray-500">{order.user?.email || "N/A"}</p>
-                      </td>
-                      <td className="px-6 py-4 text-gray-900 font-semibold">
-                        {order.total?.toLocaleString() || "0"} {t("currency") || "Toman"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status || "")}`}>
-                          {order.status || "UNKNOWN"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => router.push(`/admin/orders/${order.id}`)}
-                          aria-label="Edit order"
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        >
-                          <Edit size={18} />
-                        </button>
-                      </td>
-                    </tr>
+                <div>
+                  <h4 className="mb-2 font-semibold">آدرس ارسال</h4>
+                  <div className="space-y-1 text-sm">
+                    <p>{order.address}</p>
+                    <p>{order.city}</p>
+                    <p>کد پستی: {order.postalCode}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="mb-2 font-semibold">اقلام سفارش</h4>
+                <div className="space-y-2">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex items-center gap-4 rounded-lg border border-border p-3">
+                      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
+                        <img
+                          src={item.image || "/placeholder.svg"}
+                          alt={item.productNameFa}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productNameFa}</p>
+                        <p className="text-sm text-muted-foreground">تعداد: {item.quantity}</p>
+                      </div>
+                      <p className="font-bold text-primary">{(item.price / 1000000).toFixed(1)} میلیون تومان</p>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </div>
+              </div>
 
-          {total > 20 && (
-            <div className="flex justify-center items-center gap-3 mt-6">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                className="px-6 py-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
-              >
-                Previous
-              </button>
-              <span className="px-6 py-2">
-                {page} / {Math.ceil(total / 20)}
-              </span>
-              <button
-                disabled={page >= Math.ceil(total / 20)}
-                onClick={() => setPage(page + 1)}
-                className="px-6 py-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
-      )}
+              <div className="flex items-center justify-between border-t border-border pt-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">وضعیت سفارش:</span>
+                  <Select value={order.status} onValueChange={(value) => handleStatusChange(order.id, value)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-left">
+                    <p className="text-sm text-muted-foreground">مبلغ کل</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {(order.totalAmount / 1000000).toFixed(1)} میلیون تومان
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }
-

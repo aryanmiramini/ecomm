@@ -1,8 +1,9 @@
-# ============================================
-# Dependencies Stage
-# ============================================
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+# Multi-stage build for production
+FROM node:20-alpine AS base
+
+# Dependencies stage
+FROM base AS deps
+
 WORKDIR /app
 
 # Copy package files
@@ -11,68 +12,43 @@ COPY package.json package-lock.json* ./
 # Install dependencies
 RUN npm ci --legacy-peer-deps
 
-# ============================================
-# Builder Stage
-# ============================================
-FROM node:20-alpine AS builder
+# Builder stage
+FROM base AS builder
+
 WORKDIR /app
 
-# Copy dependencies
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
 COPY . .
 
-# Set build environment
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+# Set environment variables for build
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 
-# Build the application (creates .next/standalone)
+# Build the application
 RUN npm run build
 
-# List built files for debugging
-RUN echo "=== Build Output ===" && \
-    ls -la .next/ && \
-    echo "=== Standalone Output ===" && \
-    ls -la .next/standalone/ || echo "No standalone folder"
+# Production stage
+FROM base AS runner
 
-# ============================================
-# Runner Stage (Production)
-# ============================================
-FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Install required packages
-RUN apk add --no-cache \
-    dumb-init \
-    tini
-
-# Set production environment
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000 \
-    HOSTNAME="0.0.0.0"
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy public assets (with error handling)
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Copy Next.js build output
-# Standalone mode puts everything we need in .next/standalone/
+# Copy necessary files from builder
+COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Verify server.js exists
-RUN ls -la && \
-    if [ ! -f "server.js" ]; then \
-        echo "ERROR: server.js not found!" && \
-        echo "Contents of /app:" && \
-        ls -la && \
-        exit 1; \
-    fi
+# Set ownership
+RUN chown -R nextjs:nodejs /app
 
 # Switch to non-root user
 USER nextjs
@@ -80,12 +56,13 @@ USER nextjs
 # Expose port
 EXPOSE 3000
 
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
-# Use tini for proper signal handling
-ENTRYPOINT ["/sbin/tini", "--"]
-
-# Start Next.js server
+# Start the application
 CMD ["node", "server.js"]
+

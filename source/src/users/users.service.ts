@@ -2,13 +2,15 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import * as bcrypt from 'bcryptjs';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto): Promise<any> {
+  async create(createUserDto: CreateUserDto, options?: { role?: UserRole }): Promise<any> {
     const { email, password, phone, dateOfBirth, ...rest } = createUserDto as any;
+    const role = options?.role ?? UserRole.CUSTOMER;
     
     // Check if user already exists
     if (email) {
@@ -28,6 +30,7 @@ export class UsersService {
       email: email ? String(email).toLowerCase() : null,
       password: hashedPassword,
       phone,
+      role,
       ...rest,
     };
     if (dateOfBirth) {
@@ -97,16 +100,22 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { phone } });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<any> {
-    const user = await this.findOneById(id);
-    
-    if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+  async update(id: string, updateUserDto: UpdateUserDto, options?: { allowRoleChange?: boolean }): Promise<any> {
+    await this.findOneById(id);
+
+    const payload: any = { ...updateUserDto };
+
+    if (payload.password) {
+      payload.password = await bcrypt.hash(payload.password, 10);
+    }
+
+    if (!options?.allowRoleChange && 'role' in payload) {
+      delete payload.role;
     }
 
     const updated = await this.prisma.user.update({
       where: { id },
-      data: updateUserDto as any,
+      data: payload,
       select: {
         id: true,
         email: true,

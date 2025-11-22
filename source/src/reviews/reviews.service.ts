@@ -4,6 +4,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { UsersService } from '../users/users.service';
 import { ProductsService } from '../products/products.service';
+import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class ReviewsService {
@@ -35,11 +36,26 @@ export class ReviewsService {
       throw new BadRequestException('You have already reviewed this product');
     }
 
+    const qualifyingOrder = await this.prisma.orderItem.findFirst({
+      where: {
+        productId,
+        order: {
+          userId,
+          status: { in: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+        },
+      },
+    });
+
+    if (!qualifyingOrder) {
+      throw new BadRequestException('You can only review products you have purchased.');
+    }
+
     const savedReview = await this.prisma.review.create({
       data: {
         ...createReviewDto,
         userId,
         productId,
+        isVerifiedPurchase: true,
       } as any,
     });
 

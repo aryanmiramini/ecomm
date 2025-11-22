@@ -10,6 +10,9 @@ import { LoginDto } from './dto/login.dto';
 import { RequestResetPasswordDto, ResetPasswordDto } from './dto/reset-password.dto';
 import * as crypto from 'crypto';
 
+const OTP_REQUEST_COOLDOWN_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -63,8 +66,12 @@ export class AuthService {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000);
     await this.usersService.setResetPasswordToken(user.email, resetToken, expires);
-    // No email provider configured; return token for testing
-    return { message: 'Password reset token generated', token: resetToken };
+
+    if (process.env.NODE_ENV === 'development') {
+      return { message: 'Password reset token generated', token: resetToken };
+    }
+
+    return { message: 'Password reset token generated' };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
@@ -77,22 +84,30 @@ export class AuthService {
     const code = this.generateCode();
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
+    const recentCode = await this.prisma.otpCode.findFirst({
+      where: {
+        phone,
+        createdAt: { gt: new Date(Date.now() - OTP_REQUEST_COOLDOWN_MS) },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (recentCode) {
+      throw new BadRequestException('Please wait a moment before requesting another code.');
+    }
+
     await this.prisma.otpCode.create({ data: { phone, code, expiresAt } });
     
-    // Send SMS via Kavenegar
     try {
-      const message = `کد ورود شما به ROIDER: ${code}\nاین کد تا 2 دقیقه معتبر است.`;
-      await this.sms.sendSms(phone, message);
-      
-      // For development/testing, include code in response
+      await this.sms.sendVerificationCode(phone, code);
+
       if (process.env.NODE_ENV === 'development') {
         return { message: 'کد تایید به شماره شما ارسال شد', code };
       }
-      
+
       return { message: 'کد تایید به شماره شما ارسال شد' };
     } catch (error) {
       console.error('SMS sending failed:', error);
-      // In development, still return the code even if SMS fails
       if (process.env.NODE_ENV === 'development') {
         return { message: `SMS failed but OTP generated (dev mode): ${code}`, code };
       }
@@ -114,12 +129,21 @@ export class AuthService {
     });
 
     if (!record) {
+      await this.incrementOtpAttempt(phone);
       throw new UnauthorizedException('Invalid or expired code');
+    }
+
+    if (record.attempts >= OTP_MAX_ATTEMPTS) {
+      await this.prisma.otpCode.update({
+        where: { id: record.id },
+        data: { used: true },
+      });
+      throw new UnauthorizedException('OTP expired. Please request a new code.');
     }
 
     await this.prisma.otpCode.update({
       where: { id: record.id },
-      data: { used: true },
+      data: { used: true, attempts: { increment: 1 } },
     });
 
     let user = await this.usersService.findOneByPhone(phone);
@@ -142,5 +166,30 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  private async incrementOtpAttempt(phone: string): Promise<void> {
+    const record = await this.prisma.otpCode.findFirst({
+      where: {
+        phone,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) return;
+
+    const updated = await this.prisma.otpCode.update({
+      where: { id: record.id },
+      data: { attempts: { increment: 1 } },
+    });
+
+    if (updated.attempts >= OTP_MAX_ATTEMPTS) {
+      await this.prisma.otpCode.update({
+        where: { id: updated.id },
+        data: { used: true },
+      });
+    }
   }
 }

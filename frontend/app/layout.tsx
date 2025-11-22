@@ -1,50 +1,57 @@
+import type React from "react"
 import type { Metadata } from "next"
-import type { ReactNode } from "react"
-import { I18nProvider } from "@/i18n/provider"
-import Header from "@/components/layout/header"
-import Footer from "@/components/layout/footer"
-import "../styles/globals.css"
+
+import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "@/components/ui/sonner"
+import "./globals.css"
+
+import { Vazirmatn, Plus_Jakarta_Sans as V0_Font_Plus_Jakarta_Sans, IBM_Plex_Mono as V0_Font_IBM_Plex_Mono, Lora as V0_Font_Lora } from 'next/font/google'
+
+// Initialize fonts
+const _plusJakartaSans = V0_Font_Plus_Jakarta_Sans({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800"] })
+const _ibmPlexMono = V0_Font_IBM_Plex_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700"] })
+const _lora = V0_Font_Lora({ subsets: ['latin'], weight: ["400","500","600","700"] })
+
+// <CHANGE> Using Vazirmatn font for Persian text support
+const vazirmatn = Vazirmatn({
+  subsets: ["arabic"],
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  title: "ROIDER - فروشگاه آنلاین",
-  description: "ROIDER - بهترین فروشگاه آنلاین برای خرید محصولات باکیفیت",
-  keywords: ["ROIDER", "فروشگاه", "آنلاین", "خرید"],
-  openGraph: {
-    title: "ROIDER",
-    description: "بهترین فروشگاه آنلاین",
-    type: "website",
+  title: "فروشگاه آنلاین - Persian E-commerce",
+  description: "فروشگاه اینترنتی با طراحی زیبا و مدرن",
+  generator: "v0.app",
+  icons: {
+    icon: [
+      {
+        url: "/icon-light-32x32.png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/icon-dark-32x32.png",
+        media: "(prefers-color-scheme: dark)",
+      },
+      {
+        url: "/icon.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: "/apple-icon.png",
   },
 }
 
 export default function RootLayout({
   children,
-}: {
-  children: ReactNode
-}) {
-  const locale = "fa" // Default locale
-  
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"}>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="rgb(159, 31, 92)" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>
-        <I18nProvider locale={locale}>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-        </I18nProvider>
+    <html lang="fa" dir="rtl">
+      <body className={`${vazirmatn.className} font-sans antialiased`}>
+        {children}
+        <Analytics />
+        <Toaster />
       </body>
     </html>
   )

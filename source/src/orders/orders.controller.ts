@@ -59,7 +59,7 @@ export class OrdersController {
   @Get(':id')
   @ApiParam({ name: 'id', description: 'Order UUID', example: '123e4567-e89b-12d3-a456-426614174000' })
   findOne(@Request() req, @Param('id') id: string) {
-    return this.ordersService.findOrderById(id);
+    return this.ordersService.findOrderById(id, req.user.id, req.user.role);
   }
 
   @UseGuards(RolesGuard)

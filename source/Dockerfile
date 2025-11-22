@@ -32,11 +32,13 @@ RUN apk add --no-cache dumb-init
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-# Copy Prisma schema before generating client
+# Copy Prisma schema and generated client from builder
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Install Prisma CLI globally and generate Prisma Client
-RUN npm install -g prisma && prisma generate
+# Install the same Prisma CLI version for runtime tasks (migrate deploy)
+RUN npm install -g prisma@6.1.0
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

@@ -55,7 +55,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(req.user.id, updateUserDto);
+    const { role, ...rest } = updateUserDto;
+    return this.usersService.update(req.user.id, rest as UpdateUserDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -66,7 +67,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiParam({ name: 'id', description: 'User UUID', example: '123e4567-e89b-12d3-a456-426614174000' })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+    return this.usersService.update(id, updateUserDto, { allowRoleChange: true });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
