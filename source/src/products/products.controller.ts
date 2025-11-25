@@ -44,6 +44,7 @@ export class ProductsController {
   @ApiQuery({ name: 'maxPrice', required: false })
   @ApiQuery({ name: 'minRating', required: false })
   @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'sort', required: false, description: 'Sort order (newest, price-asc, price-desc, popular)' })
   @ApiResponse({ status: 200, description: 'List of products' })
   findAll(
     @Query('page') page?: number,
@@ -53,6 +54,7 @@ export class ProductsController {
     @Query('maxPrice') maxPrice?: number,
     @Query('minRating') minRating?: number,
     @Query('search') search?: string,
+    @Query('sort') sort?: string,
   ) {
     return this.productsService.findAllProducts(
       page,
@@ -62,6 +64,7 @@ export class ProductsController {
       maxPrice,
       minRating,
       search,
+      sort,
     );
   }
 

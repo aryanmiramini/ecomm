@@ -41,6 +41,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { AuthProvider } from "@/components/auth/auth-provider"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,7 +51,9 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
       <body className={`${vazirmatn.className} font-sans antialiased`}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Analytics />
         <Toaster />
       </body>

@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { backendFetch, BackendRequestError } from "@/lib/server-api"
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const product = await backendFetch(`/products/${params.id}`)
+    const { id } = await params
+    const product = await backendFetch(`/products/${id}`)
     return NextResponse.json(product)
   } catch (error: any) {
     return NextResponse.json(
@@ -13,10 +14,11 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const payload = await request.json()
-    const product = await backendFetch(`/products/${params.id}`, {
+    const product = await backendFetch(`/products/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }, { requireAuth: true })
@@ -29,9 +31,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const result = await backendFetch(`/products/${params.id}`, { method: "DELETE" }, { requireAuth: true })
+    const { id } = await params
+    const result = await backendFetch(`/products/${id}`, { method: "DELETE" }, { requireAuth: true })
     return NextResponse.json(result)
   } catch (error: any) {
     return NextResponse.json(

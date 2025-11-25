@@ -1,23 +1,44 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ShoppingCart, Star } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import type { Product } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCart } from "@/components/cart/cart-provider"
+import { toast } from "sonner"
 
-export default function ProductsPage() {
+function ProductsContent() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchValue, setSearchValue] = useState("")
+  const [addingProductId, setAddingProductId] = useState<string | null>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { addItem } = useCart()
+
+  const activeSearch = searchParams.get("search") ?? ""
+  const activeSort = (searchParams.get("sort") as "newest" | "price-low" | "price-high" | "popular" | null) ?? "newest"
+
+  useEffect(() => {
+    setSearchValue(activeSearch)
+  }, [activeSearch])
 
   useEffect(() => {
     async function loadProducts() {
+      setLoading(true)
       try {
-        const response = await apiClient.getProducts()
+        const response = await apiClient.getProducts({
+          search: activeSearch || undefined,
+          sort: activeSort,
+          limit: 24,
+        })
         setProducts(response.products)
       } catch (error) {
         console.error("Error loading products:", error)
@@ -26,7 +47,41 @@ export default function ProductsPage() {
       }
     }
     loadProducts()
-  }, [])
+  }, [activeSearch, activeSort])
+
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    const next = new URLSearchParams(searchParams.toString())
+    if (searchValue.trim()) {
+      next.set("search", searchValue.trim())
+    } else {
+      next.delete("search")
+    }
+    router.push(`/products?${next.toString()}`)
+  }
+
+  const handleSortChange = (value: string) => {
+    const next = new URLSearchParams(searchParams.toString())
+    if (value === "newest") {
+      next.delete("sort")
+    } else {
+      next.set("sort", value)
+    }
+    router.push(`/products?${next.toString()}`)
+  }
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      setAddingProductId(productId)
+      await addItem(productId)
+      toast.success("محصول به سبد خرید افزوده شد")
+    } catch (error: any) {
+      const message = error?.message?.includes("Authentication") ? "برای افزودن به سبد ابتدا وارد شوید" : error?.message
+      toast.error(message || "خطا در افزودن محصول")
+    } finally {
+      setAddingProductId(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -43,14 +98,23 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">تمام محصولات</h1>
           <p className="mt-2 text-muted-foreground">{products.length} محصول یافت شد</p>
         </div>
 
-        <div className="flex gap-3">
-          <Select defaultValue="newest">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <form onSubmit={handleSearchSubmit} className="flex gap-2">
+            <Input
+              placeholder="جستجو در محصولات..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="w-full sm:w-64"
+            />
+            <Button type="submit">جستجو</Button>
+          </form>
+          <Select value={activeSort} onValueChange={handleSortChange}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="مرتب‌سازی" />
             </SelectTrigger>
@@ -80,9 +144,14 @@ export default function ProductsPage() {
               )}
               {product.featured && <Badge className="absolute right-2 top-2 bg-primary">ویژه</Badge>}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <Button size="sm" className="gap-2">
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled={addingProductId === product.id}
+                  onClick={() => handleAddToCart(product.id)}
+                >
                   <ShoppingCart className="h-4 w-4" />
-                  افزودن به سبد
+                  {addingProductId === product.id ? "در حال افزودن..." : "افزودن به سبد"}
                 </Button>
               </div>
             </div>
@@ -124,5 +193,26 @@ export default function ProductsPage() {
         ))}
       </div>
     </div>
+  )
+}
+
+function ProductsLoading() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <Skeleton className="mb-8 h-10 w-48" />
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-96" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<ProductsLoading />}>
+      <ProductsContent />
+    </Suspense>
   )
 }

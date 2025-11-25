@@ -62,10 +62,42 @@ This document maps all frontend pages and components to their corresponding back
 - **Note**: Create/Update functionality ready but UI not implemented
 
 ### Admin Users (`/admin/users`)
-- **Status**: ⚠️ Placeholder page (not implemented)
+- **GET** `/api/users` → Backend: `GET /api/users` (Admin only)
+- **DELETE** `/api/users/:id` → Backend: `DELETE /api/users/:id` (Admin only)
+- **Status**: ✅ Connected
 
 ### Admin Settings (`/admin/settings`)
 - **Status**: ⚠️ Placeholder page (not implemented)
+
+## User Profile Pages
+
+### Profile (`/profile`)
+- **GET** `/api/users/profile` → Backend: `GET /api/users/profile`
+- **PATCH** `/api/users/profile` → Backend: `PATCH /api/users/profile`
+- **Status**: ✅ Connected
+
+### My Orders (`/profile/orders`)
+- **GET** `/api/orders/my-orders` → Backend: `GET /api/orders/my-orders`
+- **Status**: ✅ Connected
+
+### Wishlist (`/wishlist`)
+- **GET** `/api/wishlist` → Backend: `GET /api/wishlist`
+- **POST** `/api/wishlist/:productId` → Backend: `POST /api/wishlist/:productId`
+- **DELETE** `/api/wishlist/:productId` → Backend: `DELETE /api/wishlist/:productId`
+- **Status**: ✅ Connected
+
+## Product Features
+
+### Reviews
+- **GET** `/api/reviews/products/:productId` → Backend: `GET /api/reviews/products/:productId`
+- **POST** `/api/reviews/products/:productId` → Backend: `POST /api/reviews/products/:productId`
+- **DELETE** `/api/reviews/:reviewId` → Backend: `DELETE /api/reviews/:reviewId`
+- **Status**: ✅ Connected
+
+### Notifications
+- **GET** `/api/notifications` → Backend: `GET /api/notifications`
+- **PATCH** `/api/notifications/:id/read` → Backend: `PATCH /api/notifications/:id/read`
+- **Status**: ✅ Connected
 
 ## API Routes (Next.js Server Routes)
 

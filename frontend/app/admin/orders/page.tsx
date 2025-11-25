@@ -5,9 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Eye } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 import type { Order } from "@/lib/types"
 
 const statusLabels: Record<string, string> = {
@@ -29,6 +37,8 @@ const statusColors: Record<string, string> = {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
     async function loadOrders() {
@@ -48,10 +58,19 @@ export default function OrdersPage() {
     try {
       await apiClient.updateOrderStatus(orderId, newStatus)
       setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: newStatus as any } : order)))
-      // Show success message (you can add toast here if needed)
+      toast.success("وضعیت سفارش با موفقیت به‌روزرسانی شد")
     } catch (error: any) {
-      console.error("Error updating order status:", error)
-      alert(error.message || "خطا در بروزرسانی وضعیت سفارش")
+      toast.error(error?.message || "خطا در بروزرسانی وضعیت سفارش")
+    }
+  }
+
+  const handleViewOrder = async (orderId: string) => {
+    try {
+      const response = await apiClient.getOrder(orderId)
+      setSelectedOrder(response.order)
+      setDialogOpen(true)
+    } catch (error: any) {
+      toast.error(error?.message || "خطا در دریافت جزئیات سفارش")
     }
   }
 
@@ -159,7 +178,7 @@ export default function OrdersPage() {
                       {(order.totalAmount / 1000000).toFixed(1)} میلیون تومان
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleViewOrder(order.id)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
@@ -168,6 +187,66 @@ export default function OrdersPage() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>جزئیات سفارش #{selectedOrder?.id.slice(0, 8)}</DialogTitle>
+            <DialogDescription>اطلاعات کامل سفارش</DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <h4 className="mb-2 font-semibold">اطلاعات مشتری</h4>
+                  <div className="space-y-1 text-sm">
+                    <p>نام: {selectedOrder.customerName}</p>
+                    <p>ایمیل: {selectedOrder.customerEmail}</p>
+                    <p>تلفن: {selectedOrder.customerPhone}</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="mb-2 font-semibold">آدرس ارسال</h4>
+                  <div className="space-y-1 text-sm">
+                    <p>{selectedOrder.address}</p>
+                    <p>{selectedOrder.city}</p>
+                    <p>کد پستی: {selectedOrder.postalCode}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="mb-2 font-semibold">اقلام سفارش</h4>
+                <div className="space-y-2">
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={index} className="flex items-center gap-4 rounded-lg border border-border p-3">
+                      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
+                        <img
+                          src={item.image || "/placeholder.svg"}
+                          alt={item.productNameFa}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productNameFa}</p>
+                        <p className="text-sm text-muted-foreground">تعداد: {item.quantity}</p>
+                      </div>
+                      <p className="font-bold text-primary">{(item.price / 1000000).toFixed(1)} میلیون تومان</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-4">
+                <span className="text-lg font-semibold">مبلغ کل</span>
+                <span className="text-2xl font-bold text-primary">
+                  {(selectedOrder.totalAmount / 1000000).toFixed(1)} میلیون تومان
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

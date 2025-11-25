@@ -21,7 +21,8 @@ export async function backendFetch<T>(
   init: RequestInit = {},
   { requireAuth = false }: { requireAuth?: boolean } = {},
 ): Promise<T> {
-  const token = cookies().get("access_token")?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get("access_token")?.value
 
   if (requireAuth && !token) {
     throw new Error("Authentication required")

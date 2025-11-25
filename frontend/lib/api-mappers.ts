@@ -1,4 +1,4 @@
-import type { Product, Category, Order, OrderItem } from "@/lib/types"
+import type { Product, Category, Order, OrderItem, CartItem, CartSummary } from "@/lib/types"
 
 const placeholderImage = "/placeholder.svg"
 
@@ -80,6 +80,37 @@ export function mapOrder(order: any): Order {
     status: (statusMap[statusKey] || "pending") as Order["status"],
     createdAt: order.createdAt || new Date().toISOString(),
     updatedAt: order.updatedAt || new Date().toISOString(),
+  }
+}
+
+export function mapCart(response: any): CartSummary {
+  const items: CartItem[] = Array.isArray(response?.cart?.items)
+    ? response.cart.items.map((item: any) => {
+        const product = item.product || {}
+        const price = Number(product.price ?? 0)
+        const quantity = Number(item.quantity ?? 0)
+        return {
+          id: item.id,
+          productId: product.id,
+          name: product.name || "محصول",
+          nameFa: product.name || "محصول",
+          image: product.images?.[0] || placeholderImage,
+          quantity,
+          price,
+          total: Number(item.itemTotal ?? price * quantity),
+        }
+      })
+    : []
+
+  const subtotal = Number(response?.summary?.subtotal ?? items.reduce((sum, item) => sum + item.total, 0))
+  const totalQuantity = Number(response?.summary?.totalQuantity ?? items.reduce((sum, item) => sum + item.quantity, 0))
+  const itemCount = Number(response?.summary?.itemCount ?? items.length)
+
+  return {
+    items,
+    subtotal,
+    totalQuantity,
+    itemCount,
   }
 }
 

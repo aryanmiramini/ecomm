@@ -26,6 +26,24 @@ export interface Category {
   productCount: number
 }
 
+export interface CartItem {
+  id: string
+  productId: string
+  name: string
+  nameFa: string
+  image: string
+  quantity: number
+  price: number
+  total: number
+}
+
+export interface CartSummary {
+  items: CartItem[]
+  subtotal: number
+  itemCount: number
+  totalQuantity: number
+}
+
 export interface Order {
   id: string
   customerName: string
@@ -52,9 +70,28 @@ export interface OrderItem {
 
 export interface User {
   id: string
-  email: string
-  name: string
-  role: "admin" | "customer"
+  email: string | null
+  phone: string | null
+  firstName?: string | null
+  lastName?: string | null
+  role: "ADMIN" | "CUSTOMER"
+  isActive: boolean
+  createdAt: string
+}
+
+export interface UserProfile {
+  id: string
+  email: string | null
+  phone: string | null
+  firstName?: string | null
+  lastName?: string | null
+  shippingAddress?: string | null
+  billingAddress?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  role: "ADMIN" | "CUSTOMER"
   createdAt: string
 }
 

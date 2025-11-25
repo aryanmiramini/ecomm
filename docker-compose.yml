@@ -1,4 +1,4 @@
-services:
+services: 
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
@@ -9,7 +9,6 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ecommerce_db
     ports:
-    
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -28,8 +27,6 @@ services:
       dockerfile: Dockerfile
     container_name: roider-backend
     restart: always
-    env_file:
-      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,7 +47,7 @@ services:
       KAVENEGAR_VERIFY_TEMPLATE: ${KAVENEGAR_VERIFY_TEMPLATE}
       # CORS
       FRONTEND_URL: http://frontend:3000
-      CORS_ORIGIN: http://localhost:3001,http://localhost:3000,http://frontend:3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001,http://localhost:3000,http://frontend:3000}
       # File Upload
       MAX_FILE_SIZE: 5242880
       UPLOAD_LOCATION: ./uploads
@@ -63,10 +60,16 @@ services:
       - ./source/uploads:/app/uploads
     networks:
       - roider-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     command: >
       sh -c "
-        prisma migrate deploy &&
-        npm run start:prod
+        npx prisma migrate deploy &&
+        node dist/main
       "
 
   # Frontend (Next.js)
@@ -78,15 +81,21 @@ services:
     restart: always
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     environment:
       BACKEND_API_URL: http://backend:3000/api
-      NEXT_PUBLIC_API_URL: http://backend:3000/api
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
       NODE_ENV: production
     ports:
       - "3001:3000"
     networks:
       - roider-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   # Nginx Reverse Proxy (Optional - for production)
   # nginx:

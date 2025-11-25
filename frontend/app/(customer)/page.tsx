@@ -8,16 +8,23 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ShoppingCart, Star, TrendingUp, Zap } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import type { Product, Category } from "@/lib/types"
+import { useCart } from "@/components/cart/cart-provider"
+import { toast } from "sonner"
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [addingProductId, setAddingProductId] = useState<string | null>(null)
+  const { addItem } = useCart()
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([apiClient.getProducts(), apiClient.getCategories()])
+        const [productsRes, categoriesRes] = await Promise.all([
+          apiClient.getProducts({ limit: 12 }),
+          apiClient.getCategories(),
+        ])
         setFeaturedProducts(productsRes.products.filter((p: Product) => p.featured))
         setCategories(categoriesRes.categories)
       } catch (error) {
@@ -28,6 +35,19 @@ export default function HomePage() {
     }
     loadData()
   }, [])
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      setAddingProductId(productId)
+      await addItem(productId)
+      toast.success("محصول به سبد خرید افزوده شد")
+    } catch (error: any) {
+      const message = error?.message?.includes("Authentication") ? "لطفاً ابتدا وارد حساب کاربری شوید" : error?.message
+      toast.error(message || "خطا در افزودن به سبد خرید")
+    } finally {
+      setAddingProductId(null)
+    }
+  }
 
   return (
     <div className="space-y-16">
@@ -85,9 +105,14 @@ export default function HomePage() {
                   </Badge>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Button size="sm" className="gap-2">
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    disabled={addingProductId === product.id}
+                    onClick={() => handleAddToCart(product.id)}
+                  >
                     <ShoppingCart className="h-4 w-4" />
-                    افزودن به سبد
+                    {addingProductId === product.id ? "در حال افزودن..." : "افزودن به سبد"}
                   </Button>
                 </div>
               </div>

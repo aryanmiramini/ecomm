@@ -4,6 +4,9 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, Settings, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
+import { useState } from "react"
 
 const menuItems = [
   {
@@ -40,6 +43,19 @@ const menuItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    if (loggingOut) return
+    try {
+      setLoggingOut(true)
+      await apiClient.logout()
+      router.push("/login")
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <div className="flex h-full flex-col gap-6 border-l border-border bg-sidebar p-6">
@@ -76,9 +92,13 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <button className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
+      <button
+        className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        onClick={handleLogout}
+        disabled={loggingOut}
+      >
         <LogOut className="h-5 w-5" />
-        <span>خروج</span>
+        <span>{loggingOut ? "در حال خروج..." : "خروج"}</span>
       </button>
     </div>
   )

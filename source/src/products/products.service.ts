@@ -39,6 +39,7 @@ export class ProductsService {
     maxPrice?: number,
     minRating?: number,
     search?: string,
+    sort?: string,
   ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
     const where: any = { isActive: true };
     if (categoryId) where.categoryId = categoryId;
@@ -56,18 +57,35 @@ export class ProductsService {
       ];
     }
 
+    const orderBy = this.resolveProductSort(sort);
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
         where,
         include: { category: true },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       this.prisma.product.count({ where }),
     ]);
 
     return { data, total, page, limit };
+  }
+
+  private resolveProductSort(sort?: string) {
+    switch ((sort || '').toLowerCase()) {
+      case 'price-asc':
+        return { price: 'asc' as const };
+      case 'price-desc':
+        return { price: 'desc' as const };
+      case 'popular':
+        return { rating: 'desc' as const };
+      case 'oldest':
+        return { createdAt: 'asc' as const };
+      default:
+        return { createdAt: 'desc' as const };
+    }
   }
 
   async findProductById(id: string): Promise<any> {
