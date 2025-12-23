@@ -25,6 +25,8 @@ services:
     build:
       context: ./source
       dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://postgres:StrongPassword123@postgres:5432/ecommerce_db?schema=public
     container_name: roider-backend
     restart: always
     depends_on:
@@ -69,6 +71,7 @@ services:
     command: >
       sh -c "
         npx prisma migrate deploy &&
+         npm run prisma:seed:prod &&
         node dist/main
       "
 

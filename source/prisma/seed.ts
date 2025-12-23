@@ -1,7 +1,13 @@
 import { PrismaClient, UserRole, OrderStatus, PaymentStatus, ShippingMethod, NotificationPriority, NotificationType } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import * as bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:StrongPassword123@localhost:5432/ecommerce_db?schema=public';
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function resetDatabase() {
   console.log('🧹 Resetting tables...');
@@ -30,6 +36,7 @@ async function seedUsers() {
       lastName: 'User',
       role: UserRole.ADMIN,
       isEmailVerified: true,
+      isActive: true,
       phone: '+1-555-0100',
       shippingAddress: '123 Admin Street, New York, NY 10001',
       billingAddress: '123 Admin Street, New York, NY 10001',
@@ -48,6 +55,7 @@ async function seedUsers() {
       lastName: 'Doe',
       role: UserRole.CUSTOMER,
       isEmailVerified: true,
+      isActive: true,
       phone: '+1-555-0101',
       shippingAddress: '456 Customer Ave, Los Angeles, CA 90001',
       billingAddress: '456 Customer Ave, Los Angeles, CA 90001',
@@ -104,8 +112,8 @@ async function seedCategories() {
   return { electronics, computers, clothing, homeGarden };
 }
 
-async function seedProducts(categories: ReturnType<typeof seedCategories> extends Promise<infer R> ? R : never) {
-  const { electronics, computers, clothing, homeGarden } = categories as await ReturnType<typeof seedCategories>;
+async function seedProducts(categories: Awaited<ReturnType<typeof seedCategories>>) {
+  const { electronics, computers, clothing, homeGarden } = categories;
 
   const laptop = await prisma.product.create({
     data: {
@@ -321,4 +329,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

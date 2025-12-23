@@ -92,12 +92,14 @@ export class UsersService {
 
   async findOneByEmail(email: string): Promise<any | null> {
     if (!email) return null;
-    return this.prisma.user.findUnique({ where: { email } });
+    const normalized = email.trim().toLowerCase();
+    return this.prisma.user.findUnique({ where: { email: normalized } });
   }
 
   async findOneByPhone(phone: string): Promise<any | null> {
     if (!phone) return null;
-    return this.prisma.user.findUnique({ where: { phone } });
+    const normalized = phone.trim();
+    return this.prisma.user.findUnique({ where: { phone: normalized } });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto, options?: { allowRoleChange?: boolean }): Promise<any> {
