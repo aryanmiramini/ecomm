@@ -12,8 +12,16 @@ type GetProductsParams = {
   featured?: boolean
 }
 
-type BackendListResponse<T> = {
-  data: T[]
+type ApiResponse<T = any> = {
+  success: boolean
+  data?: T
+  message?: string
+  messageEn?: string
+  messageFa?: string
+  code?: string
+  details?: any
+  timestamp?: string
+  path?: string
   total?: number
   page?: number
   limit?: number
@@ -33,217 +41,325 @@ const mapUser = (user: any): User => {
 }
 
 export class ApiClient {
-  private async fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-    })
+  private getToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token')
+    }
+    return null
+  }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "خطا در ارتباط با سرور" }))
-      throw new Error(error.message || "خطای سرور")
+  private async fetchApi<T = any>(endpoint: string, options?: RequestInit): Promise<T> {
+    const token = this.getToken()
+    
+    const headers = new Headers(options?.headers)
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json")
+    }
+    if (!headers.has("Accept-Language")) {
+      headers.set("Accept-Language", "fa") // Default to Persian
+    }
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`)
     }
 
-    return response.json()
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    })
+
+    const responseText = await response.text()
+    let responseData: any = null
+    
+    try {
+      responseData = responseText ? JSON.parse(responseText) : null
+    } catch (e) {
+      // If not JSON, treat as text
+      responseData = responseText
+    }
+
+    if (!response.ok) {
+      // Extract error message with priority: messageFa > message > messageEn
+      let errorMessage = "خطا در ارتباط با سرور"
+      
+      if (responseData && typeof responseData === 'object') {
+        errorMessage = responseData.messageFa || 
+                      responseData.message || 
+                      responseData.messageEn ||
+                      errorMessage
+      }
+
+      const error = new Error(errorMessage) as Error & { 
+        status?: number
+        code?: string
+        details?: any 
+      }
+      error.status = response.status
+      error.code = responseData?.code
+      error.details = responseData?.details
+      throw error
+    }
+
+    return responseData as T
+  }
+
+  private normalizeProductPayload(data: any) {
+    const payload: any = { ...data }
+
+    if ("discountPrice" in payload) {
+      const basePrice = Number(payload.price ?? 0)
+      const discountPrice = payload.discountPrice !== undefined && payload.discountPrice !== null
+        ? Number(payload.discountPrice)
+        : NaN
+
+      delete payload.discountPrice
+
+      // If a discount price exists, treat current price as original and send discounted values
+      if (!Number.isNaN(discountPrice) && discountPrice > 0) {
+        const originalPrice = basePrice > 0 ? basePrice : discountPrice
+        payload.originalPrice = originalPrice
+        payload.price = discountPrice
+        if (originalPrice > discountPrice) {
+          payload.discountPercentage = Number(
+            (((originalPrice - discountPrice) / originalPrice) * 100).toFixed(2),
+          )
+        }
+      } else if (!Number.isNaN(basePrice)) {
+        payload.price = basePrice
+      }
+    }
+
+    return payload
   }
 
   // Products
   async getProducts(params: GetProductsParams = {}) {
-    const search = new URLSearchParams()
-    if (params.page) search.set("page", params.page.toString())
-    if (params.limit) search.set("limit", params.limit.toString())
-    if (params.search) search.set("search", params.search)
-    if (params.categoryId) search.set("categoryId", params.categoryId)
-    if (params.sort && params.sort !== "newest") {
+    const searchParams = new URLSearchParams()
+    if (params.page) searchParams.set("page", params.page.toString())
+    if (params.limit) searchParams.set("limit", params.limit.toString())
+    if (params.search) searchParams.set("search", params.search)
+    if (params.categoryId) searchParams.set("categoryId", params.categoryId)
+    if (params.sort) {
       const sortMap: Record<string, string> = {
+        "newest": "newest",
         "price-low": "price-asc",
         "price-high": "price-desc",
-        popular: "popular",
+        "popular": "popular",
       }
-      const sortValue = sortMap[params.sort]
-      if (sortValue) search.set("sort", sortValue)
+      searchParams.set("sort", sortMap[params.sort] || "newest")
     }
 
-    const response = await this.fetchApi<BackendListResponse<any>>(`/products${search.size ? `?${search}` : ""}`)
-    const products = Array.isArray(response.data) ? response.data.map(mapProduct) : []
-    const filteredProducts = params.featured ? products.filter((p) => p.featured) : products
+    const response = await this.fetchApi<ApiResponse>(`/products${searchParams.toString() ? `?${searchParams}` : ""}`)
+    
+    const products = Array.isArray(response.data) 
+      ? response.data.map(mapProduct) 
+      : []
+    
+    const filteredProducts = params.featured 
+      ? products.filter((p) => p.featured) 
+      : products
+
     return {
       products: filteredProducts,
-      total: response.total ?? filteredProducts.length ?? 0,
+      total: response.total ?? filteredProducts.length,
+      page: response.page ?? 1,
+      limit: response.limit ?? 10,
     }
   }
 
   async getProduct(id: string) {
-    const response = await this.fetchApi<any>(`/products/${id}`)
-    // Handle both direct product response and wrapped response
-    const productData = response.data || response
-    return { product: mapProduct(productData) }
+    const response = await this.fetchApi<ApiResponse>(`/products/${id}`)
+    return { product: mapProduct(response.data) }
   }
 
   async createProduct(data: any) {
-    return this.fetchApi("/products", {
+    const payload = this.normalizeProductPayload(data)
+    const response = await this.fetchApi<ApiResponse>("/products", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
+    return response.data
   }
 
   async updateProduct(id: string, data: any) {
-    return this.fetchApi(`/products/${id}`, {
+    const payload = this.normalizeProductPayload(data)
+    const response = await this.fetchApi<ApiResponse>(`/products/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
+    return response.data
   }
 
   async deleteProduct(id: string) {
-    return this.fetchApi(`/products/${id}`, {
+    const response = await this.fetchApi<ApiResponse>(`/products/${id}`, {
       method: "DELETE",
     })
+    return response
   }
 
   // Categories
   async getCategories() {
-    const response = await this.fetchApi<{ data?: any[]; success?: boolean } | any[]>("/categories")
-    // Handle both array response and wrapped response
-    const categoriesArray = Array.isArray(response) 
-      ? response 
-      : (Array.isArray((response as any).data) ? (response as any).data : [])
-    return {
-      categories: categoriesArray.map(mapCategory),
-    }
+    const response = await this.fetchApi<ApiResponse>("/categories")
+    const categories = Array.isArray(response.data) 
+      ? response.data.map(mapCategory)
+      : []
+    return { categories }
   }
 
   async createCategory(data: any) {
-    return this.fetchApi("/categories", {
+    const response = await this.fetchApi<ApiResponse>("/categories", {
       method: "POST",
       body: JSON.stringify(data),
     })
+    return response.data
   }
 
   async updateCategory(id: string, data: any) {
-    return this.fetchApi(`/categories/${id}`, {
+    const response = await this.fetchApi<ApiResponse>(`/categories/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     })
+    return response.data
   }
 
   async deleteCategory(id: string) {
-    return this.fetchApi(`/categories/${id}`, {
+    const response = await this.fetchApi<ApiResponse>(`/categories/${id}`, {
       method: "DELETE",
     })
+    return response
   }
 
   async getCategory(id: string) {
-    const response = await this.fetchApi<{ data?: any }>(`/categories/${id}`)
-    const categoryData = response.data || response
+    const response = await this.fetchApi<ApiResponse>(`/categories/${id}`)
+    const categoryData = response.data
     return {
       category: mapCategory(categoryData),
-      products: Array.isArray(categoryData.products) ? categoryData.products.map(mapProduct) : [],
+      products: Array.isArray(categoryData.products) 
+        ? categoryData.products.map(mapProduct) 
+        : [],
     }
   }
 
   // Orders
   async getOrders() {
-    const response = await this.fetchApi<BackendListResponse<any>>("/orders")
+    const response = await this.fetchApi<ApiResponse>("/orders")
     return {
-      orders: Array.isArray(response.data) ? response.data.map(mapOrder) : [],
-      total: response.total ?? response.data?.length ?? 0,
+      orders: Array.isArray(response.data) 
+        ? response.data.map(mapOrder) 
+        : [],
+      total: response.total ?? 0,
+      page: response.page ?? 1,
+      limit: response.limit ?? 10,
     }
   }
 
   async getMyOrders() {
-    const response = await this.fetchApi<{ orders: any[] }>("/orders/my-orders")
+    const response = await this.fetchApi<ApiResponse>("/orders/my-orders")
     return {
-      orders: response.orders || [],
+      orders: Array.isArray(response.data) 
+        ? response.data.map(mapOrder)
+        : [],
     }
   }
 
   async getOrder(id: string) {
-    const response = await this.fetchApi<any>(`/orders/${id}`)
-    // Handle both direct order response and wrapped response
-    const orderData = response.data || response
-    return { order: mapOrder(orderData) }
+    const response = await this.fetchApi<ApiResponse>(`/orders/${id}`)
+    return { order: mapOrder(response.data) }
   }
 
   async createOrder(data: any) {
-    return this.fetchApi("/orders", {
+    const response = await this.fetchApi<ApiResponse>("/orders", {
       method: "POST",
       body: JSON.stringify(data),
     })
+    return response.data
   }
 
   async updateOrderStatus(id: string, status: string) {
-    return this.fetchApi(`/orders/${id}`, {
+    const statusMap: Record<string, string> = {
+      pending: "PENDING",
+      processing: "PROCESSING",
+      shipped: "SHIPPED",
+      delivered: "DELIVERED",
+      cancelled: "CANCELLED",
+    }
+    const backendStatus = statusMap[status] || status.toUpperCase()
+    
+    const response = await this.fetchApi<ApiResponse>(`/orders/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status: backendStatus }),
     })
+    return response.data
   }
 
   // Dashboard
   async getDashboardStats(): Promise<{ stats: DashboardStats }> {
-    const response = await this.fetchApi<{ success: boolean; stats: DashboardStats }>("/admin/dashboard")
-    return { stats: response.stats }
+    const response = await this.fetchApi<ApiResponse>("/admin/dashboard")
+    return { stats: response.data as DashboardStats }
   }
 
   // Cart
   async getCart(): Promise<{ cart: CartSummary }> {
-    const response = await this.fetchApi<{ data?: any }>("/cart")
-    const data = response.data || response
-    return { cart: mapCart(data) }
+    const response = await this.fetchApi<ApiResponse>("/cart")
+    return { cart: mapCart(response.data) }
   }
 
   async addToCart(payload: { productId: string; quantity?: number }) {
-    return this.fetchApi("/cart", {
+    const response = await this.fetchApi<ApiResponse>("/cart", {
       method: "POST",
       body: JSON.stringify({ quantity: 1, ...payload }),
     })
+    return response.data
   }
 
   async updateCartItem(itemId: string, quantity: number) {
-    return this.fetchApi(`/cart/items/${itemId}`, {
+    const response = await this.fetchApi<ApiResponse>(`/cart/items/${itemId}`, {
       method: "PATCH",
       body: JSON.stringify({ quantity }),
     })
+    return response.data
   }
 
   async removeCartItem(itemId: string) {
-    return this.fetchApi(`/cart/items/${itemId}`, {
+    const response = await this.fetchApi<ApiResponse>(`/cart/items/${itemId}`, {
       method: "DELETE",
     })
+    return response
   }
 
   async clearCart() {
-    return this.fetchApi("/cart/clear", {
+    const response = await this.fetchApi<ApiResponse>("/cart/clear", {
       method: "DELETE",
     })
+    return response
   }
 
   // Users
   async getUsers(): Promise<{ users: User[] }> {
-    const response = await this.fetchApi<{ data?: any[] }>("/users")
-    const payload = (response as any)?.data ?? response
-    const users = Array.isArray(payload) ? payload.map(mapUser) : []
+    const response = await this.fetchApi<ApiResponse>("/users")
+    const users = Array.isArray(response.data) 
+      ? response.data.map(mapUser) 
+      : []
     return { users }
   }
 
   async updateUser(id: string, data: any) {
-    return this.fetchApi(`/users/${id}`, {
+    const response = await this.fetchApi<ApiResponse>(`/users/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     })
+    return response.data
   }
 
   async deleteUser(id: string) {
-    return this.fetchApi(`/users/${id}`, {
+    const response = await this.fetchApi<ApiResponse>(`/users/${id}`, {
       method: "DELETE",
     })
+    return response
   }
 
   async getProfile(): Promise<{ profile: UserProfile }> {
-    const response = await this.fetchApi<{ data?: any }>("/users/profile")
-    const data = response.data || response
+    const response = await this.fetchApi<ApiResponse>("/users/profile")
+    const data = response.data
     return {
       profile: {
         id: data.id,
@@ -264,67 +380,118 @@ export class ApiClient {
   }
 
   async updateProfile(data: Partial<UserProfile>) {
-    return this.fetchApi("/users/profile", {
+    const response = await this.fetchApi<ApiResponse>("/users/profile", {
       method: "PATCH",
       body: JSON.stringify(data),
     })
+    return response.data
+  }
+
+  // Auth
+  async login(phone: string, password: string) {
+    const response = await this.fetchApi<any>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ phone, password }),
+    })
+    
+    if (response.access_token) {
+      localStorage.setItem('token', response.access_token)
+    }
+    
+    return response
+  }
+
+  async register(data: any) {
+    const response = await this.fetchApi<any>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+    
+    if (response.access_token) {
+      localStorage.setItem('token', response.access_token)
+    }
+    
+    return response
   }
 
   async logout() {
-    return this.fetchApi("/auth/logout", { method: "POST" })
+    try {
+      await this.fetchApi("/auth/logout", { method: "POST" })
+    } finally {
+      localStorage.removeItem('token')
+    }
   }
       
   // Wishlist
   async getWishlist() {
-    const response = await this.fetchApi<{ data: Product[] }>("/wishlist")
-    // Assuming backend returns products directly or wrapped
-    const products = Array.isArray(response) ? response : (response.data || [])
-    return { products: products.map(mapProduct) }
+    const response = await this.fetchApi<ApiResponse>("/wishlist")
+    const products = Array.isArray(response.data) 
+      ? response.data.map(mapProduct) 
+      : []
+    return { products }
   }
 
   async addToWishlist(productId: string) {
-    return this.fetchApi(`/wishlist/${productId}`, { method: "POST" })
+    const response = await this.fetchApi<ApiResponse>(`/wishlist/${productId}`, { 
+      method: "POST" 
+    })
+    return response.data
   }
 
   async removeFromWishlist(productId: string) {
-    return this.fetchApi(`/wishlist/${productId}`, { method: "DELETE" })
+    const response = await this.fetchApi<ApiResponse>(`/wishlist/${productId}`, { 
+      method: "DELETE" 
+    })
+    return response
   }
 
   async checkWishlist(productId: string) {
-    return this.fetchApi<{ inWishlist: boolean }>(`/wishlist/check/${productId}`)
+    const response = await this.fetchApi<ApiResponse>(`/wishlist/check/${productId}`)
+    return response.data as { inWishlist: boolean }
   }
 
   // Notifications
   async getNotifications(unreadOnly = false) {
-    const response = await this.fetchApi<{ data: any[] }>(`/notifications${unreadOnly ? "?unreadOnly=true" : ""}`)
+    const response = await this.fetchApi<ApiResponse>(
+      `/notifications${unreadOnly ? "?unreadOnly=true" : ""}`
+    )
     return { notifications: response.data || [] }
   }
 
   async markNotificationRead(id: string) {
-    return this.fetchApi(`/notifications/${id}/read`, { method: "PATCH" })
+    const response = await this.fetchApi<ApiResponse>(`/notifications/${id}/read`, { 
+      method: "PATCH" 
+    })
+    return response.data
   }
 
   async markAllNotificationsRead() {
-    return this.fetchApi("/notifications/read-all", { method: "PATCH" })
+    const response = await this.fetchApi<ApiResponse>("/notifications/read-all", { 
+      method: "PATCH" 
+    })
+    return response.data
   }
 
   // Reviews
   async getProductReviews(productId: string) {
-    const response = await this.fetchApi<{ data: any[] }>(`/reviews/products/${productId}`)
+    const response = await this.fetchApi<ApiResponse>(`/reviews/products/${productId}`)
     return { reviews: response.data || [] }
   }
 
   async addReview(productId: string, data: { rating: number; comment: string }) {
-    return this.fetchApi(`/reviews/products/${productId}`, {
+    const response = await this.fetchApi<ApiResponse>(`/reviews/products/${productId}`, {
       method: "POST",
       body: JSON.stringify(data),
     })
+    return response.data
   }
 
   async deleteReview(reviewId: string) {
-    return this.fetchApi(`/reviews/${reviewId}`, { method: "DELETE" })
+    const response = await this.fetchApi<ApiResponse>(`/reviews/${reviewId}`, { 
+      method: "DELETE" 
+    })
+    return response
   }
 }
 
 export const apiClient = new ApiClient()
-

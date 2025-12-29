@@ -25,9 +25,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.getCart()
       setCart(response.cart)
     } catch (error) {
-      // ignore errors (likely unauthenticated) but keep cart empty
       setCart(null)
-      throw error
     } finally {
       setLoading(false)
     }

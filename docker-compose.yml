@@ -6,7 +6,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-StrongPassword123}
       POSTGRES_DB: ecommerce_db
     ports:
       - "5432:5432"
@@ -26,7 +26,7 @@ services:
       context: ./source
       dockerfile: Dockerfile
       args:
-        DATABASE_URL: postgresql://postgres:StrongPassword123@postgres:5432/ecommerce_db?schema=public
+        DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-StrongPassword123}@postgres:5432/ecommerce_db?schema=public
     container_name: roider-backend
     restart: always
     depends_on:
@@ -34,7 +34,7 @@ services:
         condition: service_healthy
     environment:
       # Database
-      DATABASE_URL: postgresql://postgres:StrongPassword123@postgres:5432/ecommerce_db?schema=public
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-StrongPassword123}@postgres:5432/ecommerce_db?schema=public
       # Application
       NODE_ENV: development
       PORT: 3000
@@ -66,7 +66,7 @@ services:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
       interval: 30s
       timeout: 10s
-      start_period: 60s
+      start_period: 60s 
       retries: 3
     command: >
       sh -c "

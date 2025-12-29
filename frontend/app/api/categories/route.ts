@@ -4,9 +4,8 @@ import { backendFetch, BackendRequestError } from "@/lib/server-api"
 // GET all categories
 export async function GET() {
   try {
-    const data = await backendFetch<any>("/products/categories/all")
-    // Backend returns array directly or wrapped in data property
-    const categories = Array.isArray(data) ? data : (Array.isArray((data as any).data) ? (data as any).data : [])
+    const data = await backendFetch<any>("/categories")
+    const categories = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     return NextResponse.json({ data: categories, success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -20,7 +19,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
-    const data = await backendFetch("/products/categories", {
+    const data = await backendFetch("/categories", {
       method: "POST",
       body: JSON.stringify(payload),
     }, { requireAuth: true })

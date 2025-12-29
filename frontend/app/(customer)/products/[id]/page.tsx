@@ -25,7 +25,7 @@ export default function ProductDetailPage() {
       try {
         const productRes = await apiClient.getProduct(params.id as string)
         setProduct(productRes.product)
-        const relatedRes = await apiClient.getProducts({ categoryId: productRes.product.category, limit: 4 })
+        const relatedRes = await apiClient.getProducts({ categoryId: productRes.product.categoryId, limit: 4 })
         setRelatedProducts(relatedRes.products.filter(p => p.id !== params.id))
       } catch (error) {
         toast.error("خطا در بارگیری محصول")
@@ -66,9 +66,20 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{product.nameFa}</h1>
           <div className="flex items-center gap-1">
-            <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" /> <span>4.5</span>
+            <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />{" "}
+            <span>{(product.rating ?? 0).toFixed(1)}</span>
           </div>
-          <p className="text-2xl font-bold text-primary">{(product.price / 1000000).toFixed(1)} میلیون تومان</p>
+          <p className="text-2xl font-bold text-primary">
+            {(product.discountPrice ?? product.price) / 1000000 > 0
+              ? ((product.discountPrice ?? product.price) / 1000000).toFixed(1)
+              : "0"}{" "}
+            میلیون تومان
+          </p>
+          {product.discountPrice && (
+            <p className="text-sm text-muted-foreground line-through">
+              {(product.price / 1000000).toFixed(1)} میلیون تومان
+            </p>
+          )}
           <p className="text-muted-foreground">{product.descriptionFa}</p>
           <p className="text-sm">موجودی: {product.stock} عدد</p>
           <Button onClick={handleAddToCart} disabled={adding || product.stock === 0} className="gap-2">

@@ -50,16 +50,21 @@ export class NotificationsService {
     return this.prisma.notification.update({ where: { id: notificationId }, data: { read: true, readAt: new Date() } });
   }
 
-  async markAllAsRead(userId: string): Promise<void> {
-    await this.prisma.notification.updateMany({ where: { userId, read: false }, data: { read: true, readAt: new Date() } });
+  async markAllAsRead(userId: string): Promise<any> {
+    const result = await this.prisma.notification.updateMany({
+      where: { userId, read: false },
+      data: { read: true, readAt: new Date() },
+    });
+    return { updatedCount: result.count };
   }
 
-  async deleteNotification(notificationId: string, userId: string): Promise<void> {
+  async deleteNotification(notificationId: string, userId: string): Promise<any> {
     const existing = await this.prisma.notification.findFirst({ where: { id: notificationId, userId } });
     if (!existing) {
       throw new NotFoundException('Notification not found');
     }
     await this.prisma.notification.delete({ where: { id: notificationId } });
+    return { deleted: true };
   }
 
   // Send SMS via Kavenegar

@@ -198,9 +198,10 @@ export class OrdersService {
     return cancelled;
   }
 
-  async removeOrder(id: string): Promise<void> {
+  async removeOrder(id: string): Promise<any> {
     await this.findOrderById(id);
     await this.prisma.order.delete({ where: { id } });
+    return { deleted: true };
   }
 
   async getOrderStats(): Promise<any> {

@@ -1,14 +1,22 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ensureSuperAdmin } from './bootstrap/super-admin.bootstrap';
+import { HttpExceptionFilter } from './common/http-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Enable CORS
   app.enableCors();
+
+  // Global interceptor for consistent responses
+  app.useGlobalInterceptors(new ResponseInterceptor());
+
+  // Consistent error shape + FA/EN messages
+  app.useGlobalFilters(new HttpExceptionFilter());
   
   // Enable validation pipe globally
   app.useGlobalPipes(
@@ -16,6 +24,18 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (errors) => {
+        const details = errors.map((e) => ({
+          field: e.property,
+          constraints: e.constraints || {},
+        }));
+        return new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          messageEn: 'Validation failed',
+          messageFa: 'اعتبارسنجی ناموفق بود',
+          details,
+        });
+      },
     }),
   );
   

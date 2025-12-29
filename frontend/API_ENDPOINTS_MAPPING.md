@@ -6,7 +6,7 @@ This document maps all frontend pages and components to their corresponding back
 
 ### Home Page (`/`)
 - **GET** `/api/products` → Backend: `GET /api/products`
-- **GET** `/api/categories` → Backend: `GET /api/products/categories/all`
+- **GET** `/api/categories` → Backend: `GET /api/categories`
 - **Status**: ✅ Connected
 
 ### Products Page (`/products`)
@@ -14,7 +14,7 @@ This document maps all frontend pages and components to their corresponding back
 - **Status**: ✅ Connected
 
 ### Categories Page (`/categories`)
-- **GET** `/api/categories` → Backend: `GET /api/products/categories/all`
+- **GET** `/api/categories` → Backend: `GET /api/categories`
 - **Status**: ✅ Connected
 
 ### Login Page (`/login`)
@@ -48,8 +48,7 @@ This document maps all frontend pages and components to their corresponding back
 ### Admin Products (`/admin/products`)
 - **GET** `/api/products` → Backend: `GET /api/products`
 - **DELETE** `/api/products/:id` → Backend: `DELETE /api/products/:id`
-- **Status**: ✅ Connected
-- **Note**: Create/Update functionality ready but UI not implemented
+- **Status**: ✅ Connected (full CRUD via admin UI)
 
 ### Admin Orders (`/admin/orders`)
 - **GET** `/api/orders` → Backend: `GET /api/orders/all`
@@ -57,9 +56,11 @@ This document maps all frontend pages and components to their corresponding back
 - **Status**: ✅ Connected
 
 ### Admin Categories (`/admin/categories`)
-- **GET** `/api/categories` → Backend: `GET /api/products/categories/all`
-- **Status**: ✅ Connected
-- **Note**: Create/Update functionality ready but UI not implemented
+- **GET** `/api/categories` → Backend: `GET /api/categories`
+- **POST** `/api/categories` → Backend: `POST /api/categories` (requires auth)
+- **PATCH** `/api/categories/:id` → Backend: `PATCH /api/categories/:id` (requires auth)
+- **DELETE** `/api/categories/:id` → Backend: `DELETE /api/categories/:id` (requires auth)
+- **Status**: ✅ Connected (full CRUD via admin UI)
 
 ### Admin Users (`/admin/users`)
 - **GET** `/api/users` → Backend: `GET /api/users` (Admin only)
@@ -67,7 +68,7 @@ This document maps all frontend pages and components to their corresponding back
 - **Status**: ✅ Connected
 
 ### Admin Settings (`/admin/settings`)
-- **Status**: ⚠️ Placeholder page (not implemented)
+- **Status**: ✅ Profile update via `/api/users/profile`
 
 ## User Profile Pages
 
@@ -109,8 +110,8 @@ This document maps all frontend pages and components to their corresponding back
 - **DELETE** `/api/products/:id` → Backend: `DELETE /api/products/:id` (requires auth)
 
 ### Categories API
-- **GET** `/api/categories` → Backend: `GET /api/products/categories/all`
-- **POST** `/api/categories` → Backend: `POST /api/products/categories` (requires auth)
+- **GET** `/api/categories` → Backend: `GET /api/categories`
+- **POST** `/api/categories` → Backend: `POST /api/categories` (requires auth)
 
 ### Orders API
 - **GET** `/api/orders` → Backend: `GET /api/orders/all` (requires auth)

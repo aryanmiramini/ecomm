@@ -3,9 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* <CHANGE> Adding Persian e-commerce color palette from provided image */
 :root {
-  /* Custom Persian E-commerce Colors based on RGB values */
   --primary-dark: rgb(65, 21, 39);
   --primary-medium: rgb(105, 34, 71);
   --accent-magenta: rgb(133, 30, 90);
@@ -171,7 +169,6 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* <CHANGE> Adding RTL support for Persian language */
   [dir="rtl"] {
     direction: rtl;
   }

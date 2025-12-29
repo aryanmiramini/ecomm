@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { UnauthorizedException, BusinessException } from '../common/exceptions/business.exception';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -39,10 +40,10 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('INVALID_CREDENTIALS');
     }
     if (!user.isActive) {
-      throw new UnauthorizedException('Account is inactive');
+      throw new UnauthorizedException('ACCOUNT_INACTIVE');
     }
     const payload = { sub: user.id, role: user.role, email: user.email, phone: user.phone };
     return {
@@ -93,7 +94,7 @@ export class AuthService {
     });
 
     if (recentCode) {
-      throw new BadRequestException('Please wait a moment before requesting another code.');
+      throw new BusinessException('OTP_COOLDOWN');
     }
 
     await this.prisma.otpCode.create({ data: { phone, code, expiresAt } });

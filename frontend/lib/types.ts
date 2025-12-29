@@ -8,10 +8,16 @@ export interface Product {
   discountPrice?: number
   image: string
   images: string[]
+  sku?: string
+  quantity?: number
   category: string
   categoryFa: string
+  categoryId?: string
   stock: number
   featured: boolean
+  isActive?: boolean
+  rating?: number
+  reviewCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -54,7 +60,7 @@ export interface Order {
   postalCode: string
   items: OrderItem[]
   totalAmount: number
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
+  status: "pending" | "processing" | "confirmed" | "paid" | "shipped" | "delivered" | "cancelled"
   createdAt: string
   updatedAt: string
 }

@@ -131,9 +131,10 @@ export class UsersService {
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<any> {
     await this.findOneById(id);
     await this.prisma.user.delete({ where: { id } });
+    return { deleted: true };
   }
 
   async setResetPasswordToken(email: string, token: string, expires: Date): Promise<void> {

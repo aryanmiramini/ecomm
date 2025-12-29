@@ -119,8 +119,9 @@ export class CartService {
     };
   }
 
-  async clearCart(userId: string): Promise<void> {
+  async clearCart(userId: string): Promise<any> {
     const cart = await this.findOrCreateCart(userId);
     await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+    return { cleared: true };
   }
 }

@@ -21,6 +21,8 @@ import type { Order } from "@/lib/types"
 const statusLabels: Record<string, string> = {
   pending: "در انتظار",
   processing: "در حال پردازش",
+  confirmed: "تایید شده",
+  paid: "پرداخت شده",
   shipped: "ارسال شده",
   delivered: "تحویل داده شده",
   cancelled: "لغو شده",
@@ -29,6 +31,8 @@ const statusLabels: Record<string, string> = {
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700",
   processing: "bg-blue-500/10 text-blue-700",
+  confirmed: "bg-cyan-500/10 text-cyan-700",
+  paid: "bg-emerald-500/10 text-emerald-700",
   shipped: "bg-purple-500/10 text-purple-700",
   delivered: "bg-green-500/10 text-green-700",
   cancelled: "bg-red-500/10 text-red-700",

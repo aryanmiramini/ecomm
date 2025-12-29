@@ -3,11 +3,19 @@ import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const token = request.cookies.get("access_token")?.value
 
-  // Protect admin routes (in production, check for actual auth token)
   if (pathname.startsWith("/admin")) {
-    // For demo purposes, allow access
-    // In production: check for valid session/token
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
+    return NextResponse.next()
+  }
+
+  if (pathname.startsWith("/profile") || pathname.startsWith("/orders") || pathname.startsWith("/wishlist") || pathname.startsWith("/checkout")) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
     return NextResponse.next()
   }
 
@@ -15,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/profile/:path*", "/orders/:path*", "/wishlist", "/checkout"],
 }

@@ -15,20 +15,33 @@ export function mapProduct(product: any): Product {
     nameFa: product.name,
     description: product.description,
     descriptionFa: product.description,
+    sku: product.sku,
+    quantity: Number(product.quantity ?? 0),
     price: price || Number(product.price ?? 0),
     discountPrice,
     image: product.images?.[0] || placeholderImage,
     images: product.images || [],
     category: product.category?.name,
     categoryFa: product.category?.name,
+    categoryId: product.categoryId,
     stock: product.quantity ?? 0,
     featured: product.isFeatured ?? false,
+    isActive: product.isActive ?? true,
+    rating: product.rating !== undefined ? Number(product.rating) : undefined,
+    reviewCount: product.reviewCount !== undefined ? Number(product.reviewCount) : undefined,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   }
 }
 
 export function mapCategory(category: any): Category {
+  const productCount =
+    typeof category?._count?.products === "number"
+      ? category._count.products
+      : Array.isArray(category?.products)
+        ? category.products.length
+        : 0
+
   return {
     id: category.id,
     name: category.name,
@@ -36,15 +49,15 @@ export function mapCategory(category: any): Category {
     description: category.description || "",
     descriptionFa: category.description || "",
     image: category.image || placeholderImage,
-    productCount: category.products?.length ?? 0,
+    productCount,
   }
 }
 
 const statusMap: Record<string, string> = {
   PENDING: "pending",
   PROCESSING: "processing",
-  CONFIRMED: "processing",
-  PAID: "processing",
+  CONFIRMED: "confirmed",
+  PAID: "paid",
   SHIPPED: "shipped",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",

@@ -4,7 +4,7 @@ import { backendFetch, BackendRequestError } from "@/lib/server-api"
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const data = await backendFetch(`/products/categories/${id}`)
+    const data = await backendFetch(`/categories/${id}`)
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -19,7 +19,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params
     const payload = await request.json()
     const data = await backendFetch(
-      `/products/categories/${id}`,
+      `/categories/${id}`,
       {
         method: "PATCH",
         body: JSON.stringify(payload),
@@ -38,7 +38,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const data = await backendFetch(`/products/categories/${id}`, { method: "DELETE" }, { requireAuth: true })
+    const data = await backendFetch(`/categories/${id}`, { method: "DELETE" }, { requireAuth: true })
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(

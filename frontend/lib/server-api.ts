@@ -10,10 +10,29 @@ const joinUrl = (base: string, path: string) => {
 
 class BackendRequestError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  payload?: unknown
+  constructor(message: string, status: number, payload?: unknown) {
     super(message)
     this.status = status
+    this.payload = payload
   }
+}
+
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+function coerceMessage(value: unknown): string | undefined {
+  if (typeof value === "string") return value
+  if (Array.isArray(value)) {
+    const parts = value.map((v) => (typeof v === "string" ? v : "")).filter(Boolean)
+    return parts.length ? parts.join("، ") : undefined
+  }
+  return undefined
 }
 
 export async function backendFetch<T>(
@@ -25,7 +44,11 @@ export async function backendFetch<T>(
   const token = cookieStore.get("access_token")?.value
 
   if (requireAuth && !token) {
-    throw new Error("Authentication required")
+    throw new BackendRequestError("نیاز به ورود دارید", 401, {
+      code: "UNAUTHORIZED",
+      messageFa: "نیاز به ورود دارید",
+      messageEn: "Authentication required",
+    })
   }
 
   const headers = new Headers(init.headers)
@@ -43,11 +66,23 @@ export async function backendFetch<T>(
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new BackendRequestError(error.message || `Backend request failed (${response.status})`, response.status)
+    const bodyText = await response.text().catch(() => "")
+    const parsed = (bodyText ? safeJsonParse(bodyText) : undefined) as any
+
+    const message =
+      coerceMessage(parsed?.messageFa) ||
+      coerceMessage(parsed?.message) ||
+      coerceMessage(parsed?.messageEn) ||
+      `Backend request failed (${response.status})`
+
+    throw new BackendRequestError(message, response.status, parsed ?? bodyText)
   }
 
-  return response.json()
+  // Some backend endpoints legitimately return an empty body (204/200 with no content).
+  const bodyText = await response.text().catch(() => "")
+  if (!bodyText) return undefined as T
+  const parsed = safeJsonParse(bodyText)
+  return (parsed as T) ?? (undefined as T)
 }
 
 export { BackendRequestError }

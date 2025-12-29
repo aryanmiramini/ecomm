@@ -84,7 +84,7 @@ export class ReviewsService {
     return updatedReview;
   }
 
-  async deleteReview(userId: string, reviewId: string): Promise<void> {
+  async deleteReview(userId: string, reviewId: string): Promise<any> {
     const review = await this.prisma.review.findFirst({ where: { id: reviewId, userId }, include: { product: true } });
 
     if (!review) {
@@ -96,6 +96,8 @@ export class ReviewsService {
 
     // Update product rating
     await this.productsService.updateRating(productId);
+
+    return { deleted: true };
   }
 
   async getProductReviews(productId: string): Promise<any[]> {

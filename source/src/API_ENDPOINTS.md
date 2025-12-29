@@ -114,13 +114,13 @@ Update product inventory
 
 ## Category Endpoints
 
-### GET /products/categories/all
+### GET /categories
 Get all categories
 
-### GET /products/categories/:id
+### GET /categories/:id
 Get category by ID
 
-### POST /products/categories (Admin only)
+### POST /categories (Admin only)
 Create category
 \`\`\`json
 {
@@ -129,10 +129,10 @@ Create category
 }
 \`\`\`
 
-### PATCH /products/categories/:id (Admin only)
+### PATCH /categories/:id (Admin only)
 Update category
 
-### DELETE /products/categories/:id (Admin only)
+### DELETE /categories/:id (Admin only)
 Delete category
 
 ## Cart Endpoints

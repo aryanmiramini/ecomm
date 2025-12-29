@@ -32,7 +32,7 @@ export class WishlistService {
     return this.prisma.wishlist.create({ data: { userId, productId } });
   }
 
-  async removeFromWishlist(userId: string, productId: string): Promise<void> {
+  async removeFromWishlist(userId: string, productId: string): Promise<any> {
     const wishlistItem = await this.prisma.wishlist.findFirst({ where: { userId, productId } });
 
     if (!wishlistItem) {
@@ -40,6 +40,7 @@ export class WishlistService {
     }
 
     await this.prisma.wishlist.delete({ where: { id: wishlistItem.id } });
+    return { removed: true };
   }
 
   async viewWishlist(userId: string): Promise<any[]> {
