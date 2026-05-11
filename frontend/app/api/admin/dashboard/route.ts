@@ -4,41 +4,66 @@ import { mapOrder, mapProduct } from "@/lib/api-mappers"
 
 export async function GET() {
   try {
+    // Initialize default values
+    let orderStats = { totalOrders: 0, totalRevenue: 0, pendingOrders: 0, deliveredOrders: 0 }
+    let totalProducts = 0
+    let featuredProducts: any[] = []
+    let recentOrders: any[] = []
+    let totalCustomers = 0
+
     // Fetch stats from orders endpoint
-    const orderStats = await backendFetch<{ totalOrders?: number; totalRevenue?: number }>("/orders/stats/overview", {}, { requireAuth: true })
+    try {
+      const stats = await backendFetch<any>("/orders/stats/overview", {}, { requireAuth: true })
+      orderStats = {
+        totalOrders: stats?.totalOrders || 0,
+        totalRevenue: Number(stats?.totalRevenue || 0),
+        pendingOrders: stats?.pendingOrders || 0,
+        deliveredOrders: stats?.deliveredOrders || 0,
+      }
+    } catch (error) {
+      console.warn("Could not fetch order stats:", error)
+    }
     
     // Fetch products count and featured products
-    const productsResponse = await backendFetch<{ data?: any[]; total?: number }>("/products?limit=100&page=1")
-    const totalProducts = productsResponse.total || 0
-    const featuredProducts = Array.isArray(productsResponse.data) 
-      ? productsResponse.data.filter((p: any) => p.isFeatured).slice(0, 5).map(mapProduct)
-      : []
+    try {
+      const productsResponse = await backendFetch<{ data?: any[]; total?: number }>("/products?limit=100&page=1")
+      totalProducts = productsResponse?.total || 0
+      featuredProducts = Array.isArray(productsResponse?.data) 
+        ? productsResponse.data.filter((p: any) => p.isFeatured).slice(0, 5).map(mapProduct)
+        : []
+    } catch (error) {
+      console.warn("Could not fetch products:", error)
+    }
 
     // Fetch recent orders
-    const ordersResponse = await backendFetch<{ data?: any[] }>("/orders/all?limit=5&page=1", {}, { requireAuth: true })
-    const recentOrders = Array.isArray(ordersResponse.data)
-      ? ordersResponse.data.map(mapOrder)
-      : []
+    try {
+      const ordersResponse = await backendFetch<{ data?: any[] }>("/orders/all?limit=5&page=1", {}, { requireAuth: true })
+      recentOrders = Array.isArray(ordersResponse?.data)
+        ? ordersResponse.data.map(mapOrder)
+        : []
+    } catch (error) {
+      console.warn("Could not fetch recent orders:", error)
+    }
 
     // Fetch users count (admin only)
-    let totalCustomers = 0
     try {
       const usersResponse = await backendFetch<any>("/users", {}, { requireAuth: true })
       if (Array.isArray(usersResponse)) {
         totalCustomers = usersResponse.filter((u: any) => u.role === "CUSTOMER").length
-      } else if (usersResponse.data && Array.isArray(usersResponse.data)) {
+      } else if (usersResponse?.data && Array.isArray(usersResponse.data)) {
         totalCustomers = usersResponse.data.filter((u: any) => u.role === "CUSTOMER").length
       }
     } catch (error) {
-      // If users endpoint fails, just set to 0
       console.warn("Could not fetch users count:", error)
     }
 
     return NextResponse.json({
       success: true,
-      stats: {
-        totalOrders: orderStats.totalOrders || 0,
-        totalRevenue: orderStats.totalRevenue || 0,
+      data: {
+        totalOrders: orderStats.totalOrders,
+        totalRevenue: orderStats.totalRevenue,
+        pendingOrders: orderStats.pendingOrders,
+        deliveredOrders: orderStats.deliveredOrders,
         totalProducts,
         totalCustomers,
         recentOrders,
@@ -47,7 +72,11 @@ export async function GET() {
     })
   } catch (error: any) {
     return NextResponse.json(
-      { message: error?.message || "خطا در دریافت آمار داشبورد", success: false },
+      { 
+        message: error?.message || "خطا در دریافت آمار داشبورد", 
+        messageFa: "خطا در دریافت آمار داشبورد",
+        success: false 
+      },
       { status: error instanceof BackendRequestError ? error.status : 500 },
     )
   }

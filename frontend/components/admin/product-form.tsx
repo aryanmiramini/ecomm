@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { ImageUpload } from "./image-upload"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { apiClient } from "@/lib/api-client"
@@ -26,6 +27,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const [categories, setCategories] = useState<Category[]>([])
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [formInitialized, setFormInitialized] = useState(false)
   
   const [formData, setFormData] = useState({
     name: "",
@@ -35,30 +37,36 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     sku: "",
     quantity: "",
     categoryId: "",
-    image: "",
     images: [] as string[],
     isFeatured: false,
     isActive: true,
   })
 
+  // Load categories on mount
   useEffect(() => {
     loadCategories()
-    if (product) {
+  }, [])
+
+  // Set form data when product changes OR after categories load (for edit mode)
+  useEffect(() => {
+    if (product && !formInitialized) {
       setFormData({
-        name: product.nameFa || "",
-        description: product.descriptionFa || "",
+        name: product.nameFa || product.name || "",
+        description: product.descriptionFa || product.description || "",
         price: product.price?.toString() || "",
         discountPrice: product.discountPrice?.toString() || "",
         sku: product.sku || "",
         quantity: (product.quantity ?? product.stock ?? 0).toString(),
         categoryId: product.categoryId || "",
-        image: product.image || "",
-        images: product.images || [],
+        images: product.images && product.images.length > 0 
+          ? product.images 
+          : (product.image && product.image !== "/placeholder.svg" ? [product.image] : []),
         isFeatured: product.featured ?? false,
         isActive: product.isActive ?? true,
       })
+      setFormInitialized(true)
     }
-  }, [product])
+  }, [product, formInitialized])
 
   const loadCategories = async () => {
     try {
@@ -66,7 +74,6 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       const res = await apiClient.getCategories()
       setCategories(res.categories)
     } catch (error: any) {
-      console.error("Error loading categories", error)
       toast.error("خطا در بارگذاری دسته‌بندی‌ها")
     } finally {
       setLoadingCategories(false)
@@ -112,6 +119,10 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     if (!formData.description.trim()) {
       errors.description = "توضیحات محصول الزامی است"
     }
+
+    if (formData.images.length === 0) {
+      errors.images = "حداقل یک تصویر برای محصول الزامی است"
+    }
     
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
@@ -143,7 +154,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       sku: formData.sku.trim(),
       quantity: Number(formData.quantity),
       categoryId: formData.categoryId,
-      images: formData.image ? [formData.image.trim()] : [],
+      images: formData.images,
       isFeatured: formData.isFeatured,
       isActive: formData.isActive,
     }
@@ -158,7 +169,6 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       }
       onSuccess()
     } catch (error: any) {
-      console.error("Error saving product:", error)
       setError(error.message || "خطا در ذخیره محصول")
       toast.error(error.message || "خطا در ذخیره محصول")
     } finally {
@@ -326,18 +336,19 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="image">لینک تصویر</Label>
-        <Input
-          id="image"
-          value={formData.image}
-          onChange={(e) => handleInputChange("image", e.target.value)}
-          placeholder="https://example.com/image.jpg"
-          type="url"
+        <Label htmlFor="images">تصاویر محصول</Label>
+        <ImageUpload 
+          value={formData.images}
+          onChange={(urls) => handleInputChange("images", urls)}
+          onRemove={(urlToRemove) => handleInputChange("images", formData.images.filter(url => url !== urlToRemove))}
           disabled={loading}
         />
         <p className="text-xs text-muted-foreground">
-          آدرس URL تصویر محصول را وارد کنید
+          تصاویر محصول را آپلود یا حذف کنید (حداکثر ۵ تصویر)
         </p>
+        {validationErrors.images && (
+          <p className="text-sm text-destructive">{validationErrors.images}</p>
+        )}
       </div>
       
       <div className="space-y-2">
@@ -359,39 +370,41 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       </div>
       
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-          <div className="space-y-0.5">
-            <Label htmlFor="isActive" className="font-semibold cursor-pointer">
-              وضعیت فعال
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              محصول در فروشگاه نمایش داده شود
-            </p>
-          </div>
+        <label 
+          htmlFor="isActive" 
+          className="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+        >
           <Switch
             id="isActive"
             checked={formData.isActive}
             onCheckedChange={(checked) => handleInputChange("isActive", checked)}
             disabled={loading}
           />
-        </div>
-        
-        <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-          <div className="space-y-0.5">
-            <Label htmlFor="isFeatured" className="font-semibold cursor-pointer">
-              محصول ویژه
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              نمایش در بخش محصولات ویژه
-            </p>
+          <div className="flex-1">
+            <span className="font-semibold block">وضعیت فعال</span>
+            <span className="text-xs text-muted-foreground">
+              محصول در فروشگاه نمایش داده شود
+            </span>
           </div>
+        </label>
+        
+        <label 
+          htmlFor="isFeatured" 
+          className="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+        >
           <Switch
             id="isFeatured"
             checked={formData.isFeatured}
             onCheckedChange={(checked) => handleInputChange("isFeatured", checked)}
             disabled={loading}
           />
-        </div>
+          <div className="flex-1">
+            <span className="font-semibold block">محصول ویژه</span>
+            <span className="text-xs text-muted-foreground">
+              نمایش در بخش محصولات ویژه
+            </span>
+          </div>
+        </label>
       </div>
       
       <div className="flex justify-end gap-3 pt-6 border-t">

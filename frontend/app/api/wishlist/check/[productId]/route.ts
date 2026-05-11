@@ -4,8 +4,8 @@ import { backendFetch, BackendRequestError } from "@/lib/server-api"
 export async function GET(_: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
   try {
     const { productId } = await params
-    const data = await backendFetch(`/wishlist/check/${productId}`, {}, { requireAuth: true })
-    return NextResponse.json(data)
+    const data = await backendFetch<boolean>(`/wishlist/check/${productId}`, {}, { requireAuth: true })
+    return NextResponse.json({ success: true, data: { inWishlist: Boolean(data) } })
   } catch (error: any) {
     return NextResponse.json(
       { message: error?.message || "خطا در بررسی وضعیت علاقه‌مندی", success: false },

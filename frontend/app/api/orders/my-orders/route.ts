@@ -3,8 +3,14 @@ import { backendFetch, BackendRequestError } from "@/lib/server-api"
 
 export async function GET() {
   try {
-    const data = await backendFetch("/orders/my-orders", {}, { requireAuth: true })
-    return NextResponse.json(data)
+    const response = await backendFetch<any>("/orders/my-orders", {}, { requireAuth: true })
+    const orders = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.data)
+        ? response.data
+        : []
+
+    return NextResponse.json({ success: true, data: orders })
   } catch (error: any) {
     return NextResponse.json(
       { message: error?.message || "خطا در دریافت سفارش‌های شما", success: false },

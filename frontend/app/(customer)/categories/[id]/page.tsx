@@ -42,7 +42,17 @@ export default function CategoryDetailsPage({ params }: { params: { id: string }
   const handleAddToCart = async (productId: string) => {
     try {
       setAddingProductId(productId)
-      await addItem(productId)
+      // Find product to pass product data for guest cart
+      const product = products.find(p => p.id === productId)
+      if (product) {
+        await addItem(productId, 1, {
+          nameFa: product.nameFa,
+          image: product.image || "/placeholder.svg",
+          price: product.discountPrice || product.price,
+        })
+      } else {
+        await addItem(productId)
+      }
       toast.success("محصول به سبد اضافه شد")
     } catch (error: any) {
       toast.error(error?.message || "خطا در افزودن محصول")
@@ -94,10 +104,12 @@ export default function CategoryDetailsPage({ params }: { params: { id: string }
               <p className="text-sm text-muted-foreground line-clamp-2">{product.descriptionFa}</p>
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-2xl font-bold text-primary">{(product.price / 1000000).toFixed(2)} میلیون</span>
-                  {product.discountPrice && (
+                  <span className="text-2xl font-bold text-primary">
+                    {(product.discountPrice || product.price).toLocaleString("fa-IR")} تومان
+                  </span>
+                  {product.discountPrice && product.discountPrice < product.price && (
                     <span className="text-xs text-muted-foreground line-through">
-                      {(product.discountPrice / 1000000).toFixed(2)} میلیون
+                      {product.price.toLocaleString("fa-IR")} تومان
                     </span>
                   )}
                 </div>

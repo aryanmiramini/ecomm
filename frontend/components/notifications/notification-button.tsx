@@ -34,9 +34,11 @@ export function NotificationButton() {
   }
 
   useEffect(() => {
-    loadNotifications()
-    const interval = setInterval(loadNotifications, 60000) // Poll every minute
-    return () => clearInterval(interval)
+    if (isAuthenticated) {
+      loadNotifications()
+      const interval = setInterval(loadNotifications, 60000) // Poll every minute
+      return () => clearInterval(interval)
+    }
   }, [isAuthenticated])
 
   const handleMarkAsRead = async (id: string) => {
@@ -118,4 +120,3 @@ export function NotificationButton() {
     </DropdownMenu>
   )
 }
-

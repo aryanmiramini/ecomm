@@ -21,8 +21,13 @@ export default function EditProductPage() {
     const load = async () => {
       try {
         const res = await apiClient.getProduct(productId as string)
-        setProduct(res.product)
+        if (res.product) {
+          setProduct(res.product)
+        } else {
+          toast.error("محصول یافت نشد")
+        }
       } catch (error: any) {
+        console.error("Error loading product:", error)
         toast.error(error?.message || "خطا در بارگذاری محصول")
       } finally {
         setLoading(false)

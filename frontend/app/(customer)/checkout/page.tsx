@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,12 +9,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/components/cart/cart-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, clear } = useCart()
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: "",
@@ -27,6 +29,34 @@ export default function CheckoutPage() {
     paymentMethod: "cash",
     notes: "",
   })
+
+  // Redirect to login if not authenticated when trying to checkout
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      // Store the intended destination
+      const returnUrl = encodeURIComponent("/checkout")
+      router.push(`/login?redirect=${returnUrl}`)
+    }
+  }, [authLoading, isAuthenticated, router])
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p className="text-muted-foreground">در حال بارگیری...</p>
+      </div>
+    )
+  }
+
+  // Don't render checkout if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="mb-4 text-3xl font-bold">لطفاً وارد شوید</h1>
+        <p className="text-muted-foreground">برای تکمیل خرید، ابتدا وارد حساب کاربری خود شوید.</p>
+      </div>
+    )
+  }
 
   if (!cart || cart.items.length === 0) {
     return (
@@ -43,7 +73,7 @@ export default function CheckoutPage() {
 
     setLoading(true)
     try {
-      await apiClient.createOrder({
+      const createdOrder = await apiClient.createOrder({
         items: cart.items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -61,7 +91,13 @@ export default function CheckoutPage() {
       })
       toast.success("سفارش با موفقیت ثبت شد")
       await clear()
-      router.push("/orders/success")
+      const orderId = createdOrder?.id || ""
+      const orderNumber = createdOrder?.orderNumber || ""
+      const query = new URLSearchParams()
+      if (orderId) query.set("orderId", orderId)
+      if (orderNumber) query.set("orderNumber", orderNumber)
+      query.set("paymentMethod", formData.paymentMethod)
+      router.push(`/orders/success${query.toString() ? `?${query.toString()}` : ""}`)
     } catch (error: any) {
       toast.error(error?.message || "خطا در ثبت سفارش")
     } finally {
@@ -193,13 +229,13 @@ export default function CheckoutPage() {
                 <span>
                   {item.nameFa} × {item.quantity}
                 </span>
-                <span className="font-medium">{(item.total / 1000000).toFixed(2)} میلیون</span>
+                <span className="font-medium">{item.total.toLocaleString('fa-IR')} تومان</span>
               </div>
             ))}
             <div className="border-t border-border pt-4 text-lg font-bold">
               <div className="flex items-center justify-between">
                 <span>مبلغ کل</span>
-                <span className="text-primary">{(cart.subtotal / 1000000).toFixed(2)} میلیون تومان</span>
+                <span className="text-primary">{cart.subtotal.toLocaleString('fa-IR')} تومان</span>
               </div>
             </div>
           </CardContent>
@@ -208,5 +244,3 @@ export default function CheckoutPage() {
     </div>
   )
 }
-
-

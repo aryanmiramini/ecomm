@@ -2,12 +2,58 @@ import type { Product, Category, Order, OrderItem, CartItem, CartSummary } from 
 
 const placeholderImage = "/placeholder.svg"
 
+// Backend URL for serving media files
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000"
+
+/**
+ * Resolves an image URL to a full URL
+ * - If it starts with /media, prepend the backend URL
+ * - If it's already a full URL (http/https), return as-is
+ * - If it's empty or undefined, return placeholder
+ */
+function resolveImageUrl(url: string | undefined | null): string {
+  if (!url) return placeholderImage
+  
+  // Already a full URL
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  
+  // Media URL from our backend
+  if (url.startsWith('/media/')) {
+    return `${BACKEND_URL}${url}`
+  }
+  
+  // Local public file or placeholder
+  if (url.startsWith('/')) {
+    return url
+  }
+  
+  return placeholderImage
+}
+
+/**
+ * Resolves an array of image URLs
+ */
+function resolveImageUrls(urls: string[] | undefined | null): string[] {
+  if (!urls || !Array.isArray(urls) || urls.length === 0) {
+    return []
+  }
+  return urls.map(resolveImageUrl)
+}
+
 export function mapProduct(product: any): Product {
   const price = Number(product.originalPrice ?? product.price ?? 0)
   const discountPrice =
     product.originalPrice && product.price ? Number(product.price) : product.discountPercentage
       ? Number(product.price)
       : undefined
+
+  const images = resolveImageUrls(product.images)
+  const mainImage = images[0] || placeholderImage
+  
+  // Extract categoryId from product.categoryId or product.category.id
+  const categoryId = product.categoryId || product.category?.id || ""
 
   return {
     id: product.id,
@@ -19,11 +65,11 @@ export function mapProduct(product: any): Product {
     quantity: Number(product.quantity ?? 0),
     price: price || Number(product.price ?? 0),
     discountPrice,
-    image: product.images?.[0] || placeholderImage,
-    images: product.images || [],
+    image: mainImage,
+    images: images,
     category: product.category?.name,
     categoryFa: product.category?.name,
-    categoryId: product.categoryId,
+    categoryId: categoryId,
     stock: product.quantity ?? 0,
     featured: product.isFeatured ?? false,
     isActive: product.isActive ?? true,
@@ -48,7 +94,7 @@ export function mapCategory(category: any): Category {
     nameFa: category.name,
     description: category.description || "",
     descriptionFa: category.description || "",
-    image: category.image || placeholderImage,
+    image: resolveImageUrl(category.image),
     productCount,
   }
 }
@@ -72,7 +118,7 @@ function mapOrderItems(items: any[] = []): OrderItem[] {
     productNameFa: item.product?.name || "محصول",
     quantity: item.quantity ?? 0,
     price: Number(item.total ?? item.subtotal ?? item.price ?? 0),
-    image: item.product?.images?.[0] || placeholderImage,
+    image: resolveImageUrl(item.product?.images?.[0]),
   }))
 }
 
@@ -97,27 +143,45 @@ export function mapOrder(order: any): Order {
 }
 
 export function mapCart(response: any): CartSummary {
-  const items: CartItem[] = Array.isArray(response?.cart?.items)
-    ? response.cart.items.map((item: any) => {
+  // Handle nested response formats: 
+  // Could be: { success, data: { id, items, ... } } 
+  // Or: { cart: {...}, summary: {...} }
+  // Or: { id, items, ... } directly
+  let cartData = response
+  
+  // Unwrap nested data if present
+  if (response?.data && typeof response.data === 'object') {
+    cartData = response.data
+  }
+  if (cartData?.cart && typeof cartData.cart === 'object') {
+    cartData = { ...cartData.cart, ...cartData.summary }
+  }
+  
+  const itemsData = cartData?.items || []
+
+  const items: CartItem[] = Array.isArray(itemsData)
+    ? itemsData.map((item: any) => {
         const product = item.product || {}
-        const price = Number(product.price ?? 0)
+        const price = Number(product.price ?? item.price ?? 0)
         const quantity = Number(item.quantity ?? 0)
+        const subtotal = Number(item.subtotal ?? item.itemTotal ?? price * quantity)
         return {
           id: item.id,
-          productId: product.id,
-          name: product.name || "محصول",
-          nameFa: product.name || "محصول",
-          image: product.images?.[0] || placeholderImage,
+          productId: product.id || item.productId,
+          name: product.name || item.name || "محصول",
+          nameFa: product.name || item.name || "محصول",
+          image: resolveImageUrl(product.images?.[0] || item.image),
           quantity,
           price,
-          total: Number(item.itemTotal ?? price * quantity),
+          total: subtotal,
         }
       })
     : []
 
-  const subtotal = Number(response?.summary?.subtotal ?? items.reduce((sum, item) => sum + item.total, 0))
-  const totalQuantity = Number(response?.summary?.totalQuantity ?? items.reduce((sum, item) => sum + item.quantity, 0))
-  const itemCount = Number(response?.summary?.itemCount ?? items.length)
+  // Calculate totals - use cartData values or calculate from items
+  const subtotal = Number(cartData?.totalAmount ?? cartData?.subtotal ?? items.reduce((sum, item) => sum + item.total, 0))
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
+  const itemCount = Number(cartData?.itemCount ?? items.length)
 
   return {
     items,
@@ -126,4 +190,3 @@ export function mapCart(response: any): CartSummary {
     itemCount,
   }
 }
-

@@ -119,7 +119,7 @@ export default function ContactPage() {
           <div className="space-y-6">
             <Card>
               <CardContent className="flex items-start gap-4 p-6">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
                   <Phone className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -132,7 +132,7 @@ export default function ContactPage() {
 
             <Card>
               <CardContent className="flex items-start gap-4 p-6">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
                   <Mail className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -145,7 +145,7 @@ export default function ContactPage() {
 
             <Card>
               <CardContent className="flex items-start gap-4 p-6">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
                   <MapPin className="h-6 w-6 text-primary" />
                 </div>
                 <div>

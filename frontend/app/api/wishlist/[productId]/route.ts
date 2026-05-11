@@ -5,7 +5,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ produ
   try {
     const { productId } = await params
     const data = await backendFetch(`/wishlist/${productId}`, { method: "POST" }, { requireAuth: true })
-    return NextResponse.json(data)
+    return NextResponse.json({ success: true, data })
   } catch (error: any) {
     return NextResponse.json(
       { message: error?.message || "خطا در افزودن به علاقه‌مندی‌ها", success: false },
@@ -18,7 +18,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ pro
   try {
     const { productId } = await params
     const data = await backendFetch(`/wishlist/${productId}`, { method: "DELETE" }, { requireAuth: true })
-    return NextResponse.json(data)
+    return NextResponse.json({ success: true, data })
   } catch (error: any) {
     return NextResponse.json(
       { message: error?.message || "خطا در حذف از علاقه‌مندی‌ها", success: false },

@@ -14,6 +14,7 @@ export default function CartPage() {
   const [pendingItemId, setPendingItemId] = useState<string | null>(null)
 
   const handleQuantityChange = async (itemId: string, nextQuantity: number) => {
+    if (!Number.isFinite(nextQuantity)) return
     if (nextQuantity < 1) {
       await handleRemove(itemId)
       return
@@ -78,7 +79,7 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <Card key={item.id}>
               <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
-                <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                   <img src={item.image || "/placeholder.svg"} alt={item.nameFa} className="h-full w-full object-cover" />
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
@@ -88,7 +89,7 @@ export default function CartPage() {
                       <p className="text-sm text-muted-foreground">شناسه محصول: {item.productId}</p>
                     </div>
                     <p className="text-xl font-bold text-primary">
-                      {(item.total / 1000000).toFixed(2)} میلیون تومان
+                      {item.total.toLocaleString('fa-IR')} تومان
                     </p>
                   </div>
 
@@ -109,7 +110,11 @@ export default function CartPage() {
                           className="w-20 text-center"
                           value={item.quantity}
                           min={1}
-                          onChange={(e) => handleQuantityChange(item.id, Number(e.target.value))}
+                          onChange={(e) => {
+                            const rawValue = e.target.value
+                            if (rawValue === "") return
+                            handleQuantityChange(item.id, Number(rawValue))
+                          }}
                         />
                         <Button
                           size="icon"
@@ -152,7 +157,7 @@ export default function CartPage() {
               </div>
               <div className="flex items-center justify-between border-t border-border pt-4 text-lg font-bold">
                 <span>مبلغ قابل پرداخت</span>
-                <span className="text-primary">{(cart.subtotal / 1000000).toFixed(2)} میلیون تومان</span>
+                <span className="text-primary">{cart.subtotal.toLocaleString('fa-IR')} تومان</span>
               </div>
 
               <div className="space-y-3 pt-2">

@@ -41,30 +41,20 @@ const mapUser = (user: any): User => {
 }
 
 export class ApiClient {
-  private getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('token')
-    }
-    return null
-  }
-
   private async fetchApi<T = any>(endpoint: string, options?: RequestInit): Promise<T> {
-    const token = this.getToken()
-    
     const headers = new Headers(options?.headers)
-    if (!headers.has("Content-Type")) {
+    const isFormData = options?.body instanceof FormData
+    if (!headers.has("Content-Type") && !isFormData) {
       headers.set("Content-Type", "application/json")
     }
     if (!headers.has("Accept-Language")) {
-      headers.set("Accept-Language", "fa") // Default to Persian
-    }
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`)
+      headers.set("Accept-Language", "fa")
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: "include", 
     })
 
     const responseText = await response.text()
@@ -73,12 +63,10 @@ export class ApiClient {
     try {
       responseData = responseText ? JSON.parse(responseText) : null
     } catch (e) {
-      // If not JSON, treat as text
       responseData = responseText
     }
 
     if (!response.ok) {
-      // Extract error message with priority: messageFa > message > messageEn
       let errorMessage = "خطا در ارتباط با سرور"
       
       if (responseData && typeof responseData === 'object') {
@@ -103,29 +91,36 @@ export class ApiClient {
   }
 
   private normalizeProductPayload(data: any) {
-    const payload: any = { ...data }
+    const payload: any = {}
 
-    if ("discountPrice" in payload) {
-      const basePrice = Number(payload.price ?? 0)
-      const discountPrice = payload.discountPrice !== undefined && payload.discountPrice !== null
-        ? Number(payload.discountPrice)
-        : NaN
+    // Copy only valid fields
+    if (data.name) payload.name = data.name
+    if (data.description) payload.description = data.description
+    if (data.sku) payload.sku = data.sku
+    if (data.categoryId) payload.categoryId = data.categoryId
+    if (data.quantity !== undefined) payload.quantity = Number(data.quantity)
+    if (data.images && Array.isArray(data.images)) payload.images = data.images
+    if (data.isActive !== undefined) payload.isActive = Boolean(data.isActive)
+    if (data.isFeatured !== undefined) payload.isFeatured = Boolean(data.isFeatured)
 
-      delete payload.discountPrice
+    // Handle price and discount
+    const basePrice = Number(data.price ?? 0)
+    const discountPrice = data.discountPrice !== undefined && data.discountPrice !== null && data.discountPrice !== ""
+      ? Number(data.discountPrice)
+      : NaN
 
-      // If a discount price exists, treat current price as original and send discounted values
-      if (!Number.isNaN(discountPrice) && discountPrice > 0) {
-        const originalPrice = basePrice > 0 ? basePrice : discountPrice
-        payload.originalPrice = originalPrice
-        payload.price = discountPrice
-        if (originalPrice > discountPrice) {
-          payload.discountPercentage = Number(
-            (((originalPrice - discountPrice) / originalPrice) * 100).toFixed(2),
-          )
-        }
-      } else if (!Number.isNaN(basePrice)) {
-        payload.price = basePrice
-      }
+    if (!Number.isNaN(discountPrice) && discountPrice > 0 && basePrice > discountPrice) {
+      // Has discount: originalPrice is the higher price, price is the discounted price
+      payload.originalPrice = basePrice
+      payload.price = discountPrice
+      payload.discountPercentage = Number(
+        (((basePrice - discountPrice) / basePrice) * 100).toFixed(2),
+      )
+    } else if (basePrice > 0) {
+      payload.price = basePrice
+      // Clear discount fields if no discount
+      payload.originalPrice = undefined
+      payload.discountPercentage = undefined
     }
 
     return payload
@@ -168,7 +163,8 @@ export class ApiClient {
 
   async getProduct(id: string) {
     const response = await this.fetchApi<ApiResponse>(`/products/${id}`)
-    return { product: mapProduct(response.data) }
+    const productData = response.data || response
+    return { product: mapProduct(productData) }
   }
 
   async createProduct(data: any) {
@@ -230,10 +226,10 @@ export class ApiClient {
 
   async getCategory(id: string) {
     const response = await this.fetchApi<ApiResponse>(`/categories/${id}`)
-    const categoryData = response.data
+    const categoryData = response.data || response
     return {
       category: mapCategory(categoryData),
-      products: Array.isArray(categoryData.products) 
+      products: Array.isArray(categoryData?.products) 
         ? categoryData.products.map(mapProduct) 
         : [],
     }
@@ -253,17 +249,19 @@ export class ApiClient {
   }
 
   async getMyOrders() {
-    const response = await this.fetchApi<ApiResponse>("/orders/my-orders")
+    const response = await this.fetchApi<ApiResponse | any[]>("/orders/my-orders")
+    const ordersData = Array.isArray(response) ? response : response?.data
     return {
-      orders: Array.isArray(response.data) 
-        ? response.data.map(mapOrder)
+      orders: Array.isArray(ordersData)
+        ? ordersData.map(mapOrder)
         : [],
     }
   }
 
   async getOrder(id: string) {
     const response = await this.fetchApi<ApiResponse>(`/orders/${id}`)
-    return { order: mapOrder(response.data) }
+    const orderData = response.data || response
+    return { order: mapOrder(orderData) }
   }
 
   async createOrder(data: any) {
@@ -294,7 +292,17 @@ export class ApiClient {
   // Dashboard
   async getDashboardStats(): Promise<{ stats: DashboardStats }> {
     const response = await this.fetchApi<ApiResponse>("/admin/dashboard")
-    return { stats: response.data as DashboardStats }
+    const data = response.data || {}
+    return { 
+      stats: {
+        totalOrders: data.totalOrders || 0,
+        totalRevenue: Number(data.totalRevenue || 0),
+        totalProducts: data.totalProducts || 0,
+        totalCustomers: data.totalCustomers || 0,
+        recentOrders: data.recentOrders || [],
+        topProducts: data.topProducts || [],
+      } 
+    }
   }
 
   // Cart
@@ -359,7 +367,12 @@ export class ApiClient {
 
   async getProfile(): Promise<{ profile: UserProfile }> {
     const response = await this.fetchApi<ApiResponse>("/users/profile")
-    const data = response.data
+    const data = response.data || response
+    
+    if (!data || !data.id) {
+      throw new Error("پروفایل کاربر یافت نشد")
+    }
+    
     return {
       profile: {
         id: data.id,
@@ -387,17 +400,12 @@ export class ApiClient {
     return response.data
   }
 
-  // Auth
-  async login(phone: string, password: string) {
+  // Auth - token is managed via httpOnly cookies, no localStorage needed
+  async login(email: string, password: string) {
     const response = await this.fetchApi<any>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ phone, password }),
+      body: JSON.stringify({ email, password }),
     })
-    
-    if (response.access_token) {
-      localStorage.setItem('token', response.access_token)
-    }
-    
     return response
   }
 
@@ -406,27 +414,20 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     })
-    
-    if (response.access_token) {
-      localStorage.setItem('token', response.access_token)
-    }
-    
     return response
   }
 
   async logout() {
-    try {
-      await this.fetchApi("/auth/logout", { method: "POST" })
-    } finally {
-      localStorage.removeItem('token')
-    }
+    await this.fetchApi("/auth/logout", { method: "POST" })
   }
       
   // Wishlist
   async getWishlist() {
     const response = await this.fetchApi<ApiResponse>("/wishlist")
-    const products = Array.isArray(response.data) 
-      ? response.data.map(mapProduct) 
+    const products = Array.isArray(response.data)
+      ? response.data
+          .map((item: any) => mapProduct(item?.product ?? item))
+          .filter((item: Product) => Boolean(item.id))
       : []
     return { products }
   }
@@ -447,6 +448,9 @@ export class ApiClient {
 
   async checkWishlist(productId: string) {
     const response = await this.fetchApi<ApiResponse>(`/wishlist/check/${productId}`)
+    if (typeof response.data === "boolean") {
+      return { inWishlist: response.data }
+    }
     return response.data as { inWishlist: boolean }
   }
 
@@ -491,6 +495,31 @@ export class ApiClient {
       method: "DELETE" 
     })
     return response
+  }
+
+  // Uploads
+  async uploadImage(file: File): Promise<{ url: string }> {
+    const formData = new FormData()
+    formData.append("file", file)
+    const response = await this.fetchApi<ApiResponse<any>>("/uploads/image", {
+      method: "POST",
+      body: formData,
+    })
+    const data = response.data?.url ? response.data : response.data?.data || response.data
+    return { url: data?.url || "" }
+  }
+
+  async uploadImages(files: File[]): Promise<{ urls: string[] }> {
+    const formData = new FormData()
+    files.forEach(file => {
+      formData.append("files", file)
+    })
+    const response = await this.fetchApi<ApiResponse<any>>("/uploads/images", {
+      method: "POST",
+      body: formData,
+    })
+    const data = response.data?.urls ? response.data : response.data?.data || response.data
+    return { urls: data?.urls || [] }
   }
 }
 

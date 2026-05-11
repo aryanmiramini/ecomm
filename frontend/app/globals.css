@@ -1,5 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
+
+/* Apply Vazirmatn as the default font */
+html {
+  font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+}
 
 @custom-variant dark (&:is(.dark *));
 

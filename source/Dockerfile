@@ -55,8 +55,8 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy built application (includes compiled seed file in dist/prisma)
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
-# Create uploads directory
-RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
+# Create media directory for uploaded files
+RUN mkdir -p /app/media/products && chown -R nestjs:nodejs /app/media
 
 # Ensure runtime user owns app files (including node_modules for any runtime writes)
 RUN chown -R nestjs:nodejs /app

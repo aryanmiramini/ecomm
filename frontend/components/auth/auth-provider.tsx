@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { apiClient } from "@/lib/api-client"
 import type { UserProfile } from "@/lib/types"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 type AuthContextType = {
   user: UserProfile | null
@@ -20,7 +20,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const pathname = usePathname()
 
   const refreshProfile = async () => {
     try {
@@ -75,4 +74,3 @@ export function useAuth() {
   }
   return context
 }
-

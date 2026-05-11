@@ -2,36 +2,57 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, ShoppingCart, TrendingUp, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Package, ShoppingCart, TrendingUp, Users, AlertCircle, RefreshCw } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import Link from "next/link"
+
+const statusLabels: Record<string, string> = {
+  pending: "در انتظار",
+  processing: "در حال پردازش",
+  confirmed: "تایید شده",
+  paid: "پرداخت شده",
+  shipped: "ارسال شده",
+  delivered: "تحویل داده شده",
+  cancelled: "لغو شده",
+}
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadStats = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await apiClient.getDashboardStats()
+      setStats(response.stats)
+    } catch (error: any) {
+      console.error("Error loading stats:", error)
+      setError(error?.message || "خطا در بارگذاری آمار داشبورد")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function loadStats() {
-      try {
-        const response = await apiClient.getDashboardStats()
-        setStats(response.stats)
-      } catch (error) {
-        console.error("Error loading stats:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
     loadStats()
   }, [])
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-foreground">داشبورد</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">داشبورد</h1>
+          <Skeleton className="h-5 w-40" />
+        </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <Skeleton className="h-4 w-24" />
               </CardHeader>
               <CardContent>
@@ -40,8 +61,42 @@ export default function AdminDashboard() {
             </Card>
           ))}
         </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[1, 2, 3].map((j) => (
+                  <Skeleton key={j} className="h-20" />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-foreground">داشبورد</h1>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button onClick={loadStats} variant="outline" className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          تلاش مجدد
+        </Button>
+      </div>
+    )
+  }
+
+  const formatPrice = (price: number) => {
+    return `${new Intl.NumberFormat("fa-IR").format(price)} تومان`
   }
 
   const statCards = [
@@ -49,29 +104,33 @@ export default function AdminDashboard() {
       title: "کل سفارشات",
       value: stats?.totalOrders || 0,
       icon: ShoppingCart,
-      color: "text-chart-1",
-      bgColor: "bg-chart-1/10",
+      color: "text-blue-600",
+      bgColor: "bg-blue-500/10",
+      href: "/admin/orders",
     },
     {
       title: "درآمد کل",
-      value: `${((stats?.totalRevenue || 0) / 1000000).toFixed(1)} میلیون تومان`,
+      value: formatPrice(stats?.totalRevenue || 0),
       icon: TrendingUp,
-      color: "text-chart-2",
-      bgColor: "bg-chart-2/10",
+      color: "text-green-600",
+      bgColor: "bg-green-500/10",
+      href: "/admin/orders",
     },
     {
       title: "تعداد محصولات",
       value: stats?.totalProducts || 0,
       icon: Package,
-      color: "text-chart-3",
-      bgColor: "bg-chart-3/10",
+      color: "text-purple-600",
+      bgColor: "bg-purple-500/10",
+      href: "/admin/products",
     },
     {
       title: "تعداد مشتریان",
       value: stats?.totalCustomers || 0,
       icon: Users,
-      color: "text-chart-4",
-      bgColor: "bg-chart-4/10",
+      color: "text-orange-600",
+      bgColor: "bg-orange-500/10",
+      href: "/admin/users",
     },
   ]
 
@@ -93,81 +152,105 @@ export default function AdminDashboard() {
         {statCards.map((stat) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title} className="overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.bgColor}`}>
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
+            <Link key={stat.title} href={stat.href}>
+              <Card className="overflow-hidden transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.bgColor}`}>
+                    <Icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                </CardContent>
+              </Card>
+            </Link>
           )
         })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>سفارشات اخیر</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/admin/orders">مشاهده همه</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {stats?.recentOrders?.length > 0 ? (
-                stats.recentOrders.map((order: any) => (
+                stats.recentOrders.slice(0, 5).map((order: any) => (
                   <div
                     key={order.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
+                    className="flex items-center justify-between rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
                   >
                     <div>
-                      <p className="font-medium">{order.customerName}</p>
+                      <p className="font-medium">{order.customerName || "مشتری"}</p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(order.createdAt).toLocaleDateString("fa-IR")}
                       </p>
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-primary">{(order.totalAmount / 1000000).toFixed(1)} میلیون تومان</p>
-                      <p className="text-sm text-muted-foreground">{order.status}</p>
+                      <p className="font-bold text-primary">{formatPrice(order.totalAmount || 0)}</p>
+                      <p className="text-sm text-muted-foreground">{statusLabels[order.status] || order.status}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-muted-foreground">سفارشی وجود ندارد</p>
+                <div className="py-8 text-center">
+                  <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                  <p className="mt-2 text-muted-foreground">سفارشی وجود ندارد</p>
+                  <p className="text-sm text-muted-foreground/70">سفارشات جدید اینجا نمایش داده می‌شوند</p>
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>محصولات برگزیده</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/admin/products">مشاهده همه</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {stats?.topProducts?.length > 0 ? (
-                stats.topProducts.map((product: any) => (
-                  <div key={product.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
-                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                stats.topProducts.slice(0, 5).map((product: any) => (
+                  <div key={product.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                       <img
                         src={product.image || "/placeholder.svg"}
-                        alt={product.nameFa}
+                        alt={product.nameFa || product.name}
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = "/placeholder.svg"
+                        }}
                       />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{product.nameFa}</p>
-                      <p className="text-sm text-muted-foreground">{product.categoryFa}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{product.nameFa || product.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{product.categoryFa || product.category || "بدون دسته‌بندی"}</p>
                     </div>
-                    <div className="text-left">
-                      <p className="font-bold text-primary">{(product.price / 1000000).toFixed(1)} میلیون</p>
-                      <p className="text-sm text-muted-foreground">موجودی: {product.stock}</p>
+                    <div className="text-left shrink-0">
+                      <p className="font-bold text-primary">{formatPrice(product.price || 0)}</p>
+                      <p className={`text-sm ${product.stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                        موجودی: {product.stock || 0}
+                      </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-muted-foreground">محصولی وجود ندارد</p>
+                <div className="py-8 text-center">
+                  <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                  <p className="mt-2 text-muted-foreground">محصولی وجود ندارد</p>
+                  <Button variant="outline" size="sm" asChild className="mt-2">
+                    <Link href="/admin/products/new">افزودن محصول</Link>
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>

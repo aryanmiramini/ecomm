@@ -1,27 +1,27 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { apiClient } from "@/lib/api-client"
+import { 
+  Package, ShoppingBag, Clock, Truck, CheckCircle2, 
+  XCircle, ChevronLeft, CalendarDays, MapPin
+} from "lucide-react"
 import type { Order } from "@/lib/types"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 
-const statusLabels: Record<string, string> = {
-  pending: "در انتظار",
-  processing: "در حال پردازش",
-  shipped: "ارسال شده",
-  delivered: "تحویل داده شده",
-  cancelled: "لغو شده",
-}
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-700",
-  processing: "bg-blue-500/10 text-blue-700",
-  shipped: "bg-purple-500/10 text-purple-700",
-  delivered: "bg-green-500/10 text-green-700",
-  cancelled: "bg-red-500/10 text-red-700",
+const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  pending: { label: "در انتظار تأیید", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400", icon: Clock },
+  processing: { label: "در حال پردازش", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: Package },
+  confirmed: { label: "تأیید شده", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400", icon: CheckCircle2 },
+  paid: { label: "پرداخت شده", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle2 },
+  shipped: { label: "ارسال شده", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", icon: Truck },
+  delivered: { label: "تحویل داده شده", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: CheckCircle2 },
+  cancelled: { label: "لغو شده", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: XCircle },
 }
 
 export default function OrdersPage() {
@@ -31,58 +31,13 @@ export default function OrdersPage() {
   useEffect(() => {
     async function loadOrders() {
       try {
-        // Use my-orders endpoint for customer orders
-        const response = await fetch("/api/orders/my-orders", {
-          credentials: "include",
-        })
-        if (!response.ok) {
-          throw new Error("Failed to fetch orders")
-        }
-        const data = await response.json()
-        // Handle both array response and wrapped response
-        const ordersArray = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : [])
-        setOrders(ordersArray.map((order: any) => {
-          // Map backend order to frontend Order type
-          const user = order.user || {}
-          const statusMap: Record<string, string> = {
-            PENDING: "pending",
-            PROCESSING: "processing",
-            CONFIRMED: "processing",
-            PAID: "processing",
-            SHIPPED: "shipped",
-            DELIVERED: "delivered",
-            CANCELLED: "cancelled",
-            RETURNED: "cancelled",
-            REFUNDED: "cancelled",
-          }
-          return {
-            id: order.id,
-            customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "مشتری",
-            customerEmail: user.email,
-            customerPhone: user.phone,
-            address: order.shippingAddress || user.shippingAddress || "",
-            city: user.city || "",
-            postalCode: user.postalCode || "",
-            items: (order.items || []).map((item: any) => ({
-              productId: item.productId,
-              productName: item.product?.name || "محصول",
-              productNameFa: item.product?.name || "محصول",
-              quantity: item.quantity ?? 0,
-              price: Number(item.total ?? item.subtotal ?? item.price ?? 0),
-              image: item.product?.images?.[0] || "/placeholder.svg",
-            })),
-            totalAmount: Number(order.total || 0),
-            status: (statusMap[order.status || "PENDING"] || "pending") as Order["status"],
-            createdAt: order.createdAt || new Date().toISOString(),
-            updatedAt: order.updatedAt || new Date().toISOString(),
-          }
-        }))
+        const response = await apiClient.getMyOrders()
+        setOrders(response.orders)
       } catch (error: any) {
         if (error?.message?.includes("Authentication")) {
           toast.error("لطفاً ابتدا وارد حساب کاربری شوید")
         } else {
           console.error("Error loading orders:", error)
-          toast.error("خطا در بارگذاری سفارشات")
         }
       } finally {
         setLoading(false)
@@ -93,11 +48,20 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <Skeleton className="mb-6 h-10 w-48" />
+      <div className="container mx-auto px-4 py-8">
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-5 w-32 mb-8" />
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-48" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="border-0 shadow-md">
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -106,80 +70,117 @@ export default function OrdersPage() {
 
   if (orders.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="mb-4 text-3xl font-bold">سفارشی وجود ندارد</h1>
-        <p className="text-muted-foreground">شما هنوز سفارشی ثبت نکرده‌اید.</p>
+      <div className="container mx-auto px-4 py-24 text-center">
+        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+          <Package className="h-12 w-12 text-primary" />
+        </div>
+        <h1 className="mb-3 text-2xl font-bold">هنوز سفارشی ثبت نکرده‌اید</h1>
+        <p className="mb-8 text-muted-foreground max-w-md mx-auto">
+          برای مشاهده سفارشات خود، ابتدا از فروشگاه خرید کنید.
+        </p>
+        <Button asChild size="lg" className="gap-2">
+          <Link href="/products">
+            مشاهده محصولات
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="mb-8 text-3xl font-bold">سفارشات من</h1>
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+          <Package className="h-7 w-7 text-primary" />
+          سفارشات من
+        </h1>
+        <p className="text-muted-foreground mt-1">{orders.length} سفارش ثبت شده</p>
+      </div>
 
-      <div className="space-y-4">
-        {orders.map((order) => (
-          <Card key={order.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle>سفارش #{order.id.slice(0, 8)}</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {new Date(order.createdAt).toLocaleDateString("fa-IR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                <Badge className={statusColors[order.status]}>{statusLabels[order.status]}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="mb-2 font-semibold">اقلام سفارش</h4>
-                <div className="space-y-2">
-                  {order.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 rounded-lg border border-border p-3">
-                      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
-                        <img
-                          src={item.image || "/placeholder.svg"}
-                          alt={item.productNameFa}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{item.productNameFa}</p>
-                        <p className="text-sm text-muted-foreground">تعداد: {item.quantity}</p>
-                      </div>
-                      <p className="font-bold text-primary">{(item.price / 1000000).toFixed(1)} میلیون تومان</p>
+      <div className="space-y-6">
+        {orders.map((order) => {
+          const status = statusConfig[order.status] || statusConfig.pending
+          const StatusIcon = status.icon
+
+          return (
+            <Card key={order.id} className="border-0 shadow-md overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                      سفارش #{order.id.slice(0, 8).toUpperCase()}
+                    </CardTitle>
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <CalendarDays className="h-4 w-4" />
+                        {new Date(order.createdAt).toLocaleDateString("fa-IR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                  <Badge className={`${status.color} gap-1 py-1.5`}>
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {status.label}
+                  </Badge>
                 </div>
-              </div>
+              </CardHeader>
 
-              <div className="flex items-center justify-between border-t border-border pt-4">
-                <div className="text-sm text-muted-foreground">آدرس ارسال</div>
-                <div className="text-left text-sm">
-                  <p>{order.address}</p>
-                  <p>{order.city}</p>
-                  <p>کد پستی: {order.postalCode}</p>
+              <CardContent className="p-6 space-y-6">
+                {/* Order Items */}
+                <div>
+                  <h4 className="mb-3 font-medium text-sm text-muted-foreground">اقلام سفارش ({order.items.length} کالا)</h4>
+                  <div className="space-y-3">
+                    {order.items.map((item, index) => (
+                      <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
+                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <img
+                            src={item.image || "/placeholder.svg"}
+                            alt={item.productNameFa}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{item.productNameFa}</p>
+                          <p className="text-sm text-muted-foreground">تعداد: {item.quantity} عدد</p>
+                        </div>
+                        <p className="font-bold text-primary whitespace-nowrap">
+                          {item.price.toLocaleString("fa-IR")} تومان
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between border-t border-border pt-4">
-                <span className="text-lg font-semibold">مبلغ کل</span>
-                <span className="text-2xl font-bold text-primary">
-                  {(order.totalAmount / 1000000).toFixed(1)} میلیون تومان
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                {/* Shipping Address */}
+                {order.address && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
+                    <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium mb-1">آدرس تحویل</p>
+                      <p className="text-muted-foreground">{order.address}</p>
+                      {order.city && <p className="text-muted-foreground">{order.city} - کد پستی: {order.postalCode}</p>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <span className="text-lg font-medium">مبلغ کل سفارش</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {order.totalAmount.toLocaleString("fa-IR")} تومان
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )
 }
-

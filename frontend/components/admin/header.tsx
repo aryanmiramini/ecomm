@@ -24,15 +24,22 @@ export function AdminHeader() {
   const [searchValue, setSearchValue] = useState("")
 
   useEffect(() => {
+    let mounted = true
     async function loadProfile() {
       try {
         const response = await apiClient.getProfile()
-        setProfile(response.profile)
+        if (mounted) {
+          setProfile(response.profile)
+        }
       } catch (error) {
-        // User not logged in or error
+        // User not logged in or error - silently ignore
+        if (mounted) {
+          setProfile(null)
+        }
       }
     }
     loadProfile()
+    return () => { mounted = false }
   }, [])
 
   const handleLogout = async () => {

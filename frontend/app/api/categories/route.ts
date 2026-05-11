@@ -4,12 +4,17 @@ import { backendFetch, BackendRequestError } from "@/lib/server-api"
 // GET all categories
 export async function GET() {
   try {
-    const data = await backendFetch<any>("/categories")
-    const categories = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+    const response = await backendFetch<any>("/categories")
+    const categories = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
     return NextResponse.json({ data: categories, success: true })
   } catch (error: any) {
     return NextResponse.json(
-      { message: error?.message || "خطا در دریافت دسته‌بندی‌ها", success: false },
+      { 
+        message: error?.message || "خطا در دریافت دسته‌بندی‌ها", 
+        messageFa: "خطا در دریافت دسته‌بندی‌ها",
+        success: false,
+        data: [],
+      },
       { status: error instanceof BackendRequestError ? error.status : 500 },
     )
   }
@@ -26,7 +31,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data, success: true }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(
-      { message: error?.message || "خطا در ایجاد دسته‌بندی", success: false },
+      { 
+        message: error?.message || "خطا در ایجاد دسته‌بندی", 
+        messageFa: "خطا در ایجاد دسته‌بندی",
+        success: false 
+      },
       { status: error instanceof BackendRequestError ? error.status : 500 },
     )
   }

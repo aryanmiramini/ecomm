@@ -52,14 +52,14 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001,http://localhost:3000,http://frontend:3000}
       # File Upload
       MAX_FILE_SIZE: 5242880
-      UPLOAD_LOCATION: ./uploads
+      MEDIA_PATH: /app/media
       # Rate Limiting
       RATE_LIMIT_TTL: 60
       RATE_LIMIT_MAX: 100
     ports:
       - "3000:3000"
     volumes:
-      - ./source/uploads:/app/uploads
+      - ./source/media:/app/media
     networks:
       - roider-network
     healthcheck:
@@ -88,6 +88,7 @@ services:
     environment:
       BACKEND_API_URL: http://backend:3000/api
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3000}
       NODE_ENV: production
     ports:
       - "3001:3000"
