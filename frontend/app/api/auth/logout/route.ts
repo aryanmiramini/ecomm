@@ -5,5 +5,3 @@ export async function POST() {
   response.cookies.delete("access_token")
   return response
 }
-
-

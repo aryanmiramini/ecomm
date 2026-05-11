@@ -27,8 +27,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const [categories, setCategories] = useState<Category[]>([])
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  const [formInitialized, setFormInitialized] = useState(false)
-  
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -42,31 +41,47 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     isActive: true,
   })
 
-  // Load categories on mount
   useEffect(() => {
     loadCategories()
   }, [])
 
-  // Set form data when product changes OR after categories load (for edit mode)
   useEffect(() => {
-    if (product && !formInitialized) {
+    if (!product) {
       setFormData({
-        name: product.nameFa || product.name || "",
-        description: product.descriptionFa || product.description || "",
-        price: product.price?.toString() || "",
-        discountPrice: product.discountPrice?.toString() || "",
-        sku: product.sku || "",
-        quantity: (product.quantity ?? product.stock ?? 0).toString(),
-        categoryId: product.categoryId || "",
-        images: product.images && product.images.length > 0 
-          ? product.images 
-          : (product.image && product.image !== "/placeholder.svg" ? [product.image] : []),
-        isFeatured: product.featured ?? false,
-        isActive: product.isActive ?? true,
+        name: "",
+        description: "",
+        price: "",
+        discountPrice: "",
+        sku: "",
+        quantity: "",
+        categoryId: "",
+        images: [] as string[],
+        isFeatured: false,
+        isActive: true,
       })
-      setFormInitialized(true)
+      return
     }
-  }, [product, formInitialized])
+    setFormData({
+      name: product.nameFa || product.name || "",
+      description: product.descriptionFa || product.description || "",
+      price: product.price?.toString() || "",
+      discountPrice:
+        product.discountPrice != null && !Number.isNaN(Number(product.discountPrice))
+          ? String(product.discountPrice)
+          : "",
+      sku: product.sku || "",
+      quantity: (product.quantity ?? product.stock ?? 0).toString(),
+      categoryId: product.categoryId || "",
+      images:
+        product.images && product.images.length > 0
+          ? product.images
+          : product.image && product.image !== "/placeholder.svg"
+            ? [product.image]
+            : [],
+      isFeatured: product.featured ?? false,
+      isActive: product.isActive ?? true,
+    })
+  }, [product?.id])
 
   const loadCategories = async () => {
     try {

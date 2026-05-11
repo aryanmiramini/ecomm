@@ -368,7 +368,7 @@ export class ApiClient {
   async getProfile(): Promise<{ profile: UserProfile }> {
     const response = await this.fetchApi<ApiResponse>("/users/profile")
     const data = response.data || response
-    
+
     if (!data || !data.id) {
       throw new Error("پروفایل کاربر یافت نشد")
     }

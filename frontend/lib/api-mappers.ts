@@ -112,30 +112,41 @@ const statusMap: Record<string, string> = {
 }
 
 function mapOrderItems(items: any[] = []): OrderItem[] {
-  return items.map((item) => ({
-    productId: item.productId,
-    productName: item.product?.name || "محصول",
-    productNameFa: item.product?.name || "محصول",
-    quantity: item.quantity ?? 0,
-    price: Number(item.total ?? item.subtotal ?? item.price ?? 0),
-    image: resolveImageUrl(item.product?.images?.[0]),
-  }))
+  return items.map((item) => {
+    const qty = Number(item.quantity ?? 0)
+    const unit = Number(item.price ?? 0)
+    const lineTotal = Number(item.subtotal ?? item.total ?? unit * qty)
+    return {
+      productId: item.productId,
+      productName: item.product?.name || "محصول",
+      productNameFa: item.product?.name || "محصول",
+      quantity: qty,
+      price: lineTotal,
+      image: resolveImageUrl(
+        Array.isArray(item.product?.images) && item.product.images.length > 0
+          ? item.product.images[0]
+          : item.product?.image,
+      ),
+    }
+  })
 }
 
 export function mapOrder(order: any): Order {
   const user = order.user || {}
   const statusKey = order.status || "PENDING"
+  const shippingName = [order.shippingFirstName, order.shippingLastName].filter(Boolean).join(" ").trim()
+  const accountName = `${user.firstName || ""} ${user.lastName || ""}`.trim()
 
   return {
     id: order.id,
-    customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "مشتری",
-    customerEmail: user.email,
-    customerPhone: user.phone,
+    customerName: shippingName || accountName || user.email || "مشتری",
+    customerEmail: order.shippingEmail || user.email || "",
+    customerPhone: order.shippingPhone || user.phone || "",
     address: order.shippingAddress || user.shippingAddress || "",
     city: user.city || "",
     postalCode: user.postalCode || "",
     items: mapOrderItems(order.items),
-    totalAmount: Number(order.total || 0),
+    totalAmount: Number(order.total ?? 0),
     status: (statusMap[statusKey] || "pending") as Order["status"],
     createdAt: order.createdAt || new Date().toISOString(),
     updatedAt: order.updatedAt || new Date().toISOString(),

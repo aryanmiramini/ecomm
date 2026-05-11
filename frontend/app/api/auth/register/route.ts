@@ -16,36 +16,34 @@ interface RegisterResponse {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
-    const registerData = await backendFetch("/auth/register", {
+    const registerData = (await backendFetch("/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
-    }) as RegisterResponse
+    })) as RegisterResponse
     let data: RegisterResponse = registerData
 
-    // Backend register can return only user data; log in to mint cookie.
     if (!data?.access_token && payload?.email && payload?.password) {
       try {
-        data = await backendFetch("/auth/login", {
+        data = (await backendFetch("/auth/login", {
           method: "POST",
           body: JSON.stringify({
             email: payload.email,
             password: payload.password,
           }),
-        }) as RegisterResponse
+        })) as RegisterResponse
       } catch {
-        // Keep registration successful even if auto-login fails.
+        //
       }
     }
 
     const response = NextResponse.json(data, { status: 201 })
 
-    // Set cookie with token if returned
     if (data?.access_token) {
       response.cookies.set("access_token", data.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 60 * 60 * 24, // 24 hours
+        maxAge: 60 * 60 * 24,
         path: "/",
       })
     }

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
@@ -10,22 +11,30 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  
-  // Serve static files from media directory
+  const configService = app.get(ConfigService);
+
   app.useStaticAssets(join(process.cwd(), 'media'), {
     prefix: '/media/',
   });
-  
-  // Enable CORS
-  app.enableCors();
 
-  // Global interceptor for consistent responses
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
+  const origins = corsOrigin
+    ? corsOrigin
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  app.enableCors({
+    origin: origins.length ? origins : true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+  });
+
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  // Consistent error shape + FA/EN messages
   app.useGlobalFilters(new HttpExceptionFilter());
-  
-  // Enable validation pipe globally
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -45,11 +54,9 @@ async function bootstrap() {
       },
     }),
   );
-  
-  // Set global prefix
+
   app.setGlobalPrefix('api');
-  
-  // Swagger Configuration
+
   const config = new DocumentBuilder()
     .setTitle('E-Commerce API')
     .setDescription('Complete e-commerce backend API with authentication (SMS OTP), products, orders, and more')
@@ -62,6 +69,7 @@ async function bootstrap() {
     .addTag('Reviews', 'Product reviews and ratings')
     .addTag('Wishlist', 'Wishlist management')
     .addTag('Notifications', 'User notifications')
+    .addTag('Public', 'Public storefront data')
     .addBearerAuth(
       {
         type: 'http',

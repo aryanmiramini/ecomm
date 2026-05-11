@@ -64,7 +64,6 @@ function LoginContent() {
       
       toast.success("ورود موفقیت‌آمیز بود")
       
-      // Redirect based on user role or redirect parameter
       if (data.user?.role === "ADMIN") {
         router.push("/admin")
       } else {

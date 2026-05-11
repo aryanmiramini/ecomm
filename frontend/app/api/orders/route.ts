@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
 
 // GET all orders
 export async function GET(request: NextRequest) {
@@ -34,10 +34,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
-    const data = await backendFetch("/orders", {
+    const raw = await backendFetch("/orders", {
       method: "POST",
       body: JSON.stringify(payload),
     }, { requireAuth: true })
+    const data = unwrapNestData(raw)
     return NextResponse.json({ success: true, data }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(

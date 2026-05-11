@@ -17,7 +17,9 @@ interface SiteStats {
   totalCategories: number
   totalCustomers: number
   satisfactionRate: number
-  yearsExperience: number
+  totalApprovedReviews: number
+  averageRating: number | null
+  yearsInBusiness: number | null
 }
 
 function ProductCard({ product, onAddToCart, isAdding }: { 
@@ -44,7 +46,6 @@ function ProductCard({ product, onAddToCart, isAdding }: {
               target.src = "/placeholder.svg"
             }}
           />
-          {/* Badges */}
           <div className="absolute top-3 right-3 flex flex-col gap-2">
             {hasDiscount && (
               <Badge className="bg-red-500 hover:bg-red-600 text-white shadow-lg">
@@ -57,8 +58,6 @@ function ProductCard({ product, onAddToCart, isAdding }: {
               </Badge>
             )}
           </div>
-          
-          {/* Quick Add Overlay */}
           <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
             <Button
               size="sm"
@@ -127,13 +126,6 @@ function ProductSkeleton() {
   )
 }
 
-function formatNumber(num: number): string {
-  if (num >= 1000) {
-    return `${Math.floor(num / 1000)}K+`
-  }
-  return `${num}+`
-}
-
 function toPersianNumber(num: number): string {
   const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
   return num.toString().replace(/\d/g, (d) => persianDigits[parseInt(d)])
@@ -174,7 +166,6 @@ export default function HomePage() {
   const handleAddToCart = async (productId: string) => {
     try {
       setAddingProductId(productId)
-      // Find product in our loaded products to pass product data for guest cart
       const product = [...featuredProducts, ...newProducts].find(p => p.id === productId)
       if (product) {
         await addItem(productId, 1, {
@@ -195,9 +186,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-0">
-      {/* Hero Section */}
       <section className="relative min-h-[600px] flex items-center overflow-hidden">
-        {/* Background Pattern */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-20 right-20 w-72 h-72 bg-primary/20 rounded-full blur-3xl" />
@@ -236,7 +225,6 @@ export default function HomePage() {
                 </Button>
               </div>
 
-              {/* Dynamic Stats */}
               <div className="flex justify-center lg:justify-start gap-8 pt-8">
                 <div className="text-center">
                   {loading || !stats ? (
@@ -261,17 +249,18 @@ export default function HomePage() {
                 <div className="text-center">
                   {loading || !stats ? (
                     <Skeleton className="h-9 w-16 mx-auto mb-1" />
-                  ) : (
+                  ) : stats.totalApprovedReviews > 0 ? (
                     <p className="text-3xl font-bold text-primary">
                       {toPersianNumber(stats.satisfactionRate)}٪
                     </p>
+                  ) : (
+                    <p className="text-3xl font-bold text-muted-foreground">—</p>
                   )}
                   <p className="text-sm text-muted-foreground">رضایت</p>
                 </div>
               </div>
             </div>
 
-            {/* Hero Image/Visual */}
             <div className="hidden lg:block relative">
               <div className="relative w-full aspect-square max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl rotate-6" />
@@ -284,7 +273,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Bar */}
       <section className="bg-muted/50 border-y border-border">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-border">
@@ -308,7 +296,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products */}
       <section className="container mx-auto px-4 py-16">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -349,7 +336,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories Grid */}
       <section className="bg-muted/30 py-16">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-10">
@@ -422,7 +408,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Products */}
       <section className="container mx-auto px-4 py-16">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -463,7 +448,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="container mx-auto px-4 pb-16">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-primary to-accent text-white">
           <div className="absolute inset-0 opacity-10">

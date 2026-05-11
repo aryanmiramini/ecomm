@@ -62,6 +62,7 @@ export default function EditProductPage() {
         </CardHeader>
         <CardContent>
           <ProductForm
+            key={product.id}
             product={product}
             onSuccess={() => router.push("/admin/products")}
             onCancel={() => router.back()}

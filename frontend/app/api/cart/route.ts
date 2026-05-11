@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
 
 export async function GET() {
   try {
-    const data = await backendFetch("/cart/summary", {}, { requireAuth: true })
+    const raw = await backendFetch("/cart/summary", {}, { requireAuth: true })
+    const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -16,7 +17,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
-    const data = await backendFetch(
+    const raw = await backendFetch(
       "/cart/add",
       {
         method: "POST",
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
       },
       { requireAuth: true },
     )
+    const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(

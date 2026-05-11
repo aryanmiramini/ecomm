@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const product = await backendFetch(`/products/${id}`)
+    const raw = await backendFetch(`/products/${id}`)
+    const product = unwrapNestData(raw)
     return NextResponse.json({ success: true, data: product })
   } catch (error: any) {
     return NextResponse.json(
@@ -22,10 +23,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = await params
     const payload = await request.json()
-    const product = await backendFetch(`/products/${id}`, {
+    const raw = await backendFetch(`/products/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }, { requireAuth: true })
+    const product = unwrapNestData(raw)
     return NextResponse.json({ success: true, data: product })
   } catch (error: any) {
     return NextResponse.json(

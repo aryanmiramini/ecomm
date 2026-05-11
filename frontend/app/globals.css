@@ -2,7 +2,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Apply Vazirmatn as the default font */
 html {
   font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
 }
@@ -140,7 +139,6 @@ html {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --font-serif: "Lora", "Lora Fallback";
-  /* computed shadow variables below - do not modify */
   --shadow-2xs: var(--shadow-x) var(--shadow-y)
     color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
   --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread)
@@ -170,7 +168,10 @@ html {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-none;
+  }
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
   }
   body {
     @apply bg-background text-foreground;

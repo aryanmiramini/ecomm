@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
 import { mapOrder, mapProduct } from "@/lib/api-mappers"
 
 export async function GET() {
@@ -13,12 +13,13 @@ export async function GET() {
 
     // Fetch stats from orders endpoint
     try {
-      const stats = await backendFetch<any>("/orders/stats/overview", {}, { requireAuth: true })
+      const raw = await backendFetch<any>("/orders/stats/overview", {}, { requireAuth: true })
+      const stats = unwrapNestData(raw) as typeof orderStats & { totalRevenue?: unknown }
       orderStats = {
-        totalOrders: stats?.totalOrders || 0,
-        totalRevenue: Number(stats?.totalRevenue || 0),
-        pendingOrders: stats?.pendingOrders || 0,
-        deliveredOrders: stats?.deliveredOrders || 0,
+        totalOrders: Number(stats?.totalOrders ?? 0),
+        totalRevenue: Number(stats?.totalRevenue ?? 0),
+        pendingOrders: Number(stats?.pendingOrders ?? 0),
+        deliveredOrders: Number(stats?.deliveredOrders ?? 0),
       }
     } catch (error) {
       console.warn("Could not fetch order stats:", error)

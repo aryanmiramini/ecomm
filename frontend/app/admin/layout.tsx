@@ -9,10 +9,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Server-side auth check
   const cookieStore = await cookies()
   const token = cookieStore.get("access_token")?.value
-  
+
   if (!token) {
     redirect("/login")
   }

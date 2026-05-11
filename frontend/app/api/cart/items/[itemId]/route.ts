@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ itemId: string }> }) {
   try {
     const { itemId } = await params
     const payload = await request.json()
-    const data = await backendFetch(
+    const raw = await backendFetch(
       `/cart/items/${itemId}`,
       {
         method: "PATCH",
@@ -13,6 +13,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
       { requireAuth: true },
     )
+    const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -25,7 +26,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ itemId: string }> }) {
   try {
     const { itemId } = await params
-    const data = await backendFetch(`/cart/items/${itemId}`, { method: "DELETE" }, { requireAuth: true })
+    const raw = await backendFetch(`/cart/items/${itemId}`, { method: "DELETE" }, { requireAuth: true })
+    const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(
