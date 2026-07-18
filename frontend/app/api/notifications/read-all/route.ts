@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
 
 export async function PATCH() {
   try {
-    const data = await backendFetch("/notifications/read-all", { method: "PATCH" }, { requireAuth: true })
+    const raw = await backendFetch("/notifications/read-all", { method: "PATCH" }, { requireAuth: true })
+    const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(

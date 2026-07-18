@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
   try {
     const { productId } = await params
-    const data = await backendFetch(`/reviews/products/${productId}`)
+    const raw = await backendFetch(`/reviews/products/${productId}`)
+    const data = coerceArray(unwrapNestData(raw))
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { productId } = await params
     const payload = await request.json()
-    const data = await backendFetch(
+    const raw = await backendFetch(
       `/reviews/products/${productId}`,
       {
         method: "POST",
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
       { requireAuth: true },
     )
+    const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(

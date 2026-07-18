@@ -1,5 +1,6 @@
 # Multi-stage build for production
-FROM node:20-alpine AS base
+ARG NODE_IMAGE=node:20-alpine
+FROM ${NODE_IMAGE} AS base
 
 # Dependencies stage
 FROM base AS deps
@@ -65,4 +66,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Start the application
 CMD ["node", "server.js"]
-

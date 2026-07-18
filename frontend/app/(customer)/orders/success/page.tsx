@@ -106,7 +106,7 @@ function OrderSuccessContent() {
 
           {/* Help Text */}
           <p className="text-xs text-muted-foreground mt-6">
-            ایمیل تأیید سفارش به آدرس شما ارسال شده است.
+            سفارش شما ثبت شد. پرداخت طبق روش انتخاب‌شده هنگام تحویل انجام می‌شود.
             <br />
             برای هرگونه سوال با پشتیبانی تماس بگیرید.
           </p>

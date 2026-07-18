@@ -10,6 +10,9 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { ApiTags, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
 // Define the file type interface locally
@@ -28,7 +31,8 @@ export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Post('image')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -72,7 +76,8 @@ export class UploadsController {
   }
 
   @Post('images')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @UseInterceptors(
     FilesInterceptor('files', 10, {

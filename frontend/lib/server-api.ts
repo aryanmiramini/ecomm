@@ -35,20 +35,7 @@ function coerceMessage(value: unknown): string | undefined {
   return undefined
 }
 
-export function unwrapNestData<T = unknown>(body: unknown): T {
-  if (
-    body !== null &&
-    typeof body === "object" &&
-    !("access_token" in body) &&
-    "success" in body &&
-    (body as { success: unknown }).success === true &&
-    "data" in body &&
-    (body as { data: unknown }).data !== undefined
-  ) {
-    return (body as { data: T }).data
-  }
-  return body as T
-}
+export { coerceArray, unwrapNestedEnvelope as unwrapNestData } from "./api-unwrap"
 
 export async function backendFetch<T>(
   path: string,

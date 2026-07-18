@@ -1,24 +1,20 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { jwtVerify } from "jose"
 
-// Decode JWT payload without verification (verification happens on backend)
-function decodeJwtPayload(token: string): { role?: string; id?: string } | null {
+async function verifyJwtPayload(token: string): Promise<{ role?: string; id?: string } | null> {
+  const secret = process.env.JWT_SECRET
+  if (!secret) return null
+
   try {
-    const parts = token.split(".")
-    if (parts.length !== 3) return null
-
-    // Decode base64url to base64
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
-    const padding = "=".repeat((4 - (base64.length % 4)) % 4)
-    const decoded = atob(base64 + padding)
-
-    return JSON.parse(decoded)
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
+    return payload as { role?: string; id?: string }
   } catch {
     return null
   }
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const token = request.cookies.get("access_token")?.value
 
@@ -27,10 +23,8 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
 
-    // Decode token and check admin role
-    const payload = decodeJwtPayload(token)
+    const payload = await verifyJwtPayload(token)
     if (!payload || payload.role !== "ADMIN") {
-      // Not an admin, redirect to home
       return NextResponse.redirect(new URL("/", request.url))
     }
 
@@ -46,6 +40,12 @@ export function proxy(request: NextRequest) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
+
+    const payload = await verifyJwtPayload(token)
+    if (!payload?.id) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
+
     return NextResponse.next()
   }
 

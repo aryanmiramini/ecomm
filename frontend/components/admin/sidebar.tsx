@@ -4,61 +4,39 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, Settings, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useRouter } from "next/navigation"
-import { apiClient } from "@/lib/api-client"
+import { useAuth } from "@/components/auth/auth-provider"
+import { toast } from "sonner"
 import { useState } from "react"
 
 const menuItems = [
-  {
-    title: "داشبورد",
-    href: "/admin",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "محصولات",
-    href: "/admin/products",
-    icon: Package,
-  },
-  {
-    title: "سفارشات",
-    href: "/admin/orders",
-    icon: ShoppingCart,
-  },
-  {
-    title: "دسته‌بندی‌ها",
-    href: "/admin/categories",
-    icon: FolderTree,
-  },
-  {
-    title: "کاربران",
-    href: "/admin/users",
-    icon: Users,
-  },
-  {
-    title: "تنظیمات",
-    href: "/admin/settings",
-    icon: Settings,
-  },
+  { title: "داشبورد", href: "/admin", icon: LayoutDashboard },
+  { title: "محصولات", href: "/admin/products", icon: Package },
+  { title: "سفارشات", href: "/admin/orders", icon: ShoppingCart },
+  { title: "دسته‌بندی‌ها", href: "/admin/categories", icon: FolderTree },
+  { title: "کاربران", href: "/admin/users", icon: Users },
+  { title: "تنظیمات", href: "/admin/settings", icon: Settings },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const router = useRouter()
+  const { logout } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
 
   const handleLogout = async () => {
     if (loggingOut) return
+    setLoggingOut(true)
     try {
-      setLoggingOut(true)
-      await apiClient.logout()
-      router.push("/login")
+      await logout({ redirectTo: "/login" })
+      toast.success("با موفقیت خارج شدید")
+    } catch (error: any) {
+      toast.error(error?.message || "خطا در خروج")
     } finally {
       setLoggingOut(false)
     }
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 border-l border-border bg-sidebar p-6">
+    <div className="flex h-full flex-col gap-6 border-l border-border bg-sidebar p-4 md:p-6">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
           <Package className="h-6 w-6 text-primary-foreground" />
@@ -93,12 +71,13 @@ export function AdminSidebar() {
       </nav>
 
       <button
-        className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        type="button"
+        className="flex w-full items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
         onClick={handleLogout}
         disabled={loggingOut}
       >
         <LogOut className="h-5 w-5" />
-        <span>{loggingOut ? "در حال خروج..." : "خروج"}</span>
+        <span>{loggingOut ? "در حال خروج..." : "خروج از حساب"}</span>
       </button>
     </div>
   )

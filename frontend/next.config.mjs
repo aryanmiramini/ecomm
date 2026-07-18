@@ -1,3 +1,8 @@
+const backendOrigin =
+  process.env.BACKEND_API_URL?.replace(/\/api\/?$/, '') ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  'http://localhost:3000'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -14,7 +19,19 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'backend',
       },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/media/:path*',
+        destination: `${backendOrigin}/media/:path*`,
+      },
+    ]
   },
   output: 'standalone',
   turbopack: {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
 import { mapOrder, mapProduct } from "@/lib/api-mappers"
 
 export async function GET() {
@@ -28,10 +28,10 @@ export async function GET() {
     // Fetch products count and featured products
     try {
       const productsResponse = await backendFetch<{ data?: any[]; total?: number }>("/products?limit=100&page=1")
-      totalProducts = productsResponse?.total || 0
-      featuredProducts = Array.isArray(productsResponse?.data) 
-        ? productsResponse.data.filter((p: any) => p.isFeatured).slice(0, 5).map(mapProduct)
-        : []
+      const productsPayload = unwrapNestData(productsResponse) as { data?: any[]; total?: number }
+      const productList = coerceArray(productsPayload?.data ?? productsPayload)
+      totalProducts = productsResponse?.total ?? productsPayload?.total ?? productList.length
+      featuredProducts = productList.filter((p: any) => p.isFeatured).slice(0, 5).map(mapProduct)
     } catch (error) {
       console.warn("Could not fetch products:", error)
     }
@@ -39,9 +39,8 @@ export async function GET() {
     // Fetch recent orders
     try {
       const ordersResponse = await backendFetch<{ data?: any[] }>("/orders/all?limit=5&page=1", {}, { requireAuth: true })
-      recentOrders = Array.isArray(ordersResponse?.data)
-        ? ordersResponse.data.map(mapOrder)
-        : []
+      const ordersPayload = unwrapNestData(ordersResponse) as { data?: any[] }
+      recentOrders = coerceArray(ordersPayload?.data ?? ordersPayload).map(mapOrder)
     } catch (error) {
       console.warn("Could not fetch recent orders:", error)
     }
@@ -49,11 +48,8 @@ export async function GET() {
     // Fetch users count (admin only)
     try {
       const usersResponse = await backendFetch<any>("/users", {}, { requireAuth: true })
-      if (Array.isArray(usersResponse)) {
-        totalCustomers = usersResponse.filter((u: any) => u.role === "CUSTOMER").length
-      } else if (usersResponse?.data && Array.isArray(usersResponse.data)) {
-        totalCustomers = usersResponse.data.filter((u: any) => u.role === "CUSTOMER").length
-      }
+      const users = coerceArray(unwrapNestData(usersResponse))
+      totalCustomers = users.filter((u: any) => u.role === "CUSTOMER").length
     } catch (error) {
       console.warn("Could not fetch users count:", error)
     }

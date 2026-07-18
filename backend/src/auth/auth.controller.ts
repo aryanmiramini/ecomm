@@ -1,5 +1,6 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
@@ -17,6 +18,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Register a new user (email/password)' })
   @ApiResponse({ status: 201, description: 'User successfully registered' })
   register(@Body() createUserDto: CreateUserDto) {
@@ -24,6 +26,7 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 200, description: 'Login successful, returns JWT token' })
@@ -33,6 +36,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Request password reset (email)' })
   @ApiResponse({ status: 201, description: 'Password reset token generated' })
   requestPasswordReset(@Body() requestResetDto: RequestResetPasswordDto) {
@@ -47,6 +51,7 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('request-otp')
   @ApiOperation({ summary: 'Request SMS OTP for login/signup' })
   @ApiResponse({ status: 200, description: 'OTP sent via SMS' })
@@ -55,6 +60,7 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('verify-otp')
   @ApiOperation({ summary: 'Verify OTP and receive JWT' })
   @ApiResponse({ status: 200, description: 'Login successful' })

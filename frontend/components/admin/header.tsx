@@ -4,7 +4,7 @@ import { Search, User, LogOut } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { NotificationButton } from "@/components/notifications/notification-button"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
@@ -14,41 +14,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { apiClient } from "@/lib/api-client"
+import { useAuth } from "@/components/auth/auth-provider"
 import { toast } from "sonner"
-import type { UserProfile } from "@/lib/types"
 
 export function AdminHeader() {
   const router = useRouter()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const { user, logout } = useAuth()
   const [searchValue, setSearchValue] = useState("")
-
-  useEffect(() => {
-    let mounted = true
-    async function loadProfile() {
-      try {
-        const response = await apiClient.getProfile()
-        if (mounted) {
-          setProfile(response.profile)
-        }
-      } catch (error) {
-        // User not logged in or error - silently ignore
-        if (mounted) {
-          setProfile(null)
-        }
-      }
-    }
-    loadProfile()
-    return () => { mounted = false }
-  }, [])
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const handleLogout = async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
     try {
-      await apiClient.logout()
+      await logout({ redirectTo: "/login" })
       toast.success("با موفقیت خارج شدید")
-      router.push("/login")
     } catch (error: any) {
       toast.error(error?.message || "خطا در خروج")
+    } finally {
+      setLoggingOut(false)
     }
   }
 
@@ -61,7 +45,7 @@ export function AdminHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background px-6">
+    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background px-4 md:px-6">
       <div className="flex flex-1 items-center gap-4">
         <div className="relative w-full max-w-md">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -76,23 +60,32 @@ export function AdminHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <NotificationButton />
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={handleLogout}
+          disabled={loggingOut}
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline">{loggingOut ? "در حال خروج..." : "خروج"}</span>
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="منوی کاربر">
               <User className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>
-              {profile?.email || "کاربر"}
-            </DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.email || user?.phone || "مدیر"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+            <DropdownMenuItem onClick={handleLogout} disabled={loggingOut} className="cursor-pointer text-destructive">
               <LogOut className="ml-2 h-4 w-4" />
-              خروج
+              خروج از حساب
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

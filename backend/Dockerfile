@@ -1,5 +1,6 @@
 # Multi-stage build for production
-FROM node:20-alpine AS builder
+ARG NODE_IMAGE=node:20-alpine
+FROM ${NODE_IMAGE} AS builder
 
 # Set working directory
 WORKDIR /app
@@ -28,7 +29,8 @@ RUN npm run build
 RUN npx tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --skipLibCheck --module commonjs --target ES2022
 
 # Production stage
-FROM node:20-alpine
+ARG NODE_IMAGE=node:20-alpine
+FROM ${NODE_IMAGE}
 
 WORKDIR /app
 

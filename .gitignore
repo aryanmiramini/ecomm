@@ -8,9 +8,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .pnpm-debug.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+# Lockfiles at repo root only — keep backend/frontend lockfiles tracked
+/package-lock.json
+/yarn.lock
+/pnpm-lock.yaml
 
 # =====================================================
 # ENVIRONMENT VARIABLES (SENSITIVE)
@@ -41,9 +42,8 @@ dist/
 # =====================================================
 # NESTJS (Backend)
 # =====================================================
-/source/dist/
-/source/uploads/
-/source/.env
+/backend/dist/
+/backend/.env
 
 # =====================================================
 # TYPESCRIPT
@@ -113,7 +113,9 @@ Desktop.ini
 # UPLOADS & MEDIA
 # =====================================================
 /uploads/
-/source/uploads/
+/backend/media/*
+!/backend/media/seed/
+!/backend/media/seed/**
 /public/uploads/
 
 # =====================================================

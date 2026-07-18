@@ -10,7 +10,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function resetDatabase() {
-  console.log('🧹 Resetting tables...');
+  console.log('🧹 در حال پاک‌سازی جداول...');
   await prisma.$transaction([
     prisma.notification.deleteMany(),
     prisma.wishlist.deleteMany(),
@@ -22,6 +22,7 @@ async function resetDatabase() {
     prisma.product.deleteMany(),
     prisma.category.deleteMany(),
     prisma.user.deleteMany(),
+    prisma.otpCode.deleteMany(),
   ]);
 }
 
@@ -32,18 +33,18 @@ async function seedUsers() {
     data: {
       email: 'admin@ecommerce.com',
       password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
+      firstName: 'مدیر',
+      lastName: 'سیستم',
       role: UserRole.ADMIN,
       isEmailVerified: true,
       isActive: true,
-      phone: '+1-555-0100',
-      shippingAddress: '123 Admin Street, New York, NY 10001',
-      billingAddress: '123 Admin Street, New York, NY 10001',
-      city: 'New York',
-      state: 'NY',
-      postalCode: '10001',
-      country: 'United States',
+      phone: '09120000001',
+      shippingAddress: 'تهران، خیابان ولیعصر، پلاک ۱۲۳، واحد ۵',
+      billingAddress: 'تهران، خیابان ولیعصر، پلاک ۱۲۳، واحد ۵',
+      city: 'تهران',
+      state: 'تهران',
+      postalCode: '1417812345',
+      country: 'ایران',
     },
   });
 
@@ -51,64 +52,68 @@ async function seedUsers() {
     data: {
       email: 'customer@example.com',
       password: hashedPassword,
-      firstName: 'John',
-      lastName: 'Doe',
+      firstName: 'علی',
+      lastName: 'رضایی',
       role: UserRole.CUSTOMER,
       isEmailVerified: true,
       isActive: true,
-      phone: '+1-555-0101',
-      shippingAddress: '456 Customer Ave, Los Angeles, CA 90001',
-      billingAddress: '456 Customer Ave, Los Angeles, CA 90001',
-      city: 'Los Angeles',
-      state: 'CA',
-      postalCode: '90001',
-      country: 'United States',
+      phone: '09121234567',
+      shippingAddress: 'اصفهان، خیابان چهارباغ عباسی، کوچه گلستان، پلاک ۴۵',
+      billingAddress: 'اصفهان، خیابان چهارباغ عباسی، کوچه گلستان، پلاک ۴۵',
+      city: 'اصفهان',
+      state: 'اصفهان',
+      postalCode: '8145678901',
+      country: 'ایران',
     },
   });
 
-  console.log('✅ Seeded users');
+  console.log('✅ کاربران ایجاد شدند');
   return { admin, customer };
 }
 
 async function seedCategories() {
   const electronics = await prisma.category.create({
     data: {
-      name: 'Electronics',
-      description: 'Electronic devices and gadgets',
-      slug: 'electronics',
+      name: 'الکترونیک',
+      description: 'گوشی، تبلت، لوازم جانبی و گجت‌های دیجیتال',
+      slug: 'elektronik',
       icon: 'fa-laptop',
+      image: '/media/seed/electronics.svg',
     },
   });
 
   const computers = await prisma.category.create({
     data: {
-      name: 'Computers & Laptops',
-      description: 'Desktop computers, laptops, and accessories',
-      slug: 'computers-laptops',
+      name: 'رایانه و لپ‌تاپ',
+      description: 'لپ‌تاپ، رایانه رومیزی و تجهیزات جانبی',
+      slug: 'laptop-computer',
       icon: 'fa-computer',
       parentId: electronics.id,
+      image: '/media/seed/laptop.svg',
     },
   });
 
   const clothing = await prisma.category.create({
     data: {
-      name: 'Clothing',
-      description: 'Fashion and apparel',
-      slug: 'clothing',
+      name: 'پوشاک',
+      description: 'لباس، کفش و اکسسوری‌های روزمره',
+      slug: 'pooshak',
       icon: 'fa-shirt',
+      image: '/media/seed/clothing.svg',
     },
   });
 
   const homeGarden = await prisma.category.create({
     data: {
-      name: 'Home & Garden',
-      description: 'Home improvement and garden supplies',
-      slug: 'home-garden',
+      name: 'خانه و آشپزخانه',
+      description: 'لوازم خانگی، آشپزخانه و دکوراسیون',
+      slug: 'khaneh-ashpazkhaneh',
       icon: 'fa-home',
+      image: '/media/seed/coffee.svg',
     },
   });
 
-  console.log('✅ Seeded categories');
+  console.log('✅ دسته‌بندی‌ها ایجاد شدند');
   return { electronics, computers, clothing, homeGarden };
 }
 
@@ -117,75 +122,76 @@ async function seedProducts(categories: Awaited<ReturnType<typeof seedCategories
 
   const laptop = await prisma.product.create({
     data: {
-      name: 'Gaming Laptop Pro 15',
-      description: 'High-performance gaming laptop with RTX 4080, 32GB RAM, 1TB SSD.',
-      price: 1299.99,
-      originalPrice: 1499.99,
-      discountPercentage: 13.33,
+      name: 'لپ‌تاپ گیمینگ پرو ۱۵',
+      description:
+        'لپ‌تاپ قدرتمند گیمینگ با پردازنده نسل جدید، کارت گرافیک RTX، ۳۲ گیگابایت رم و حافظه SSD یک ترابایتی. مناسب بازی، طراحی و کارهای سنگین.',
+      price: 52990000,
+      originalPrice: 58990000,
+      discountPercentage: 10.17,
       sku: 'LAP-GAMING-001',
       quantity: 50,
-      brand: 'TechBrand',
-      model: 'GP15-2024',
-      images: [
-        'https://images.unsplash.com/photo-1603302576837-37561b2e2302',
-        'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed',
-      ],
-      tags: ['gaming', 'laptop', 'high-performance', 'rtx'],
+      brand: 'تک‌پرداز',
+      model: 'GP15-1403',
+      images: ['/media/seed/laptop.svg', '/media/seed/laptop.svg'],
+      tags: ['گیمینگ', 'لپ‌تاپ', 'قدرتمند', 'گرافیک'],
       isFeatured: true,
-      warranty: '2 years manufacturer warranty',
-      shippingInfo: 'Free shipping on orders over $50',
-      madeIn: 'Taiwan',
+      warranty: 'گارانتی ۲۴ ماهه شرکت',
+      shippingInfo: 'ارسال رایگان برای سفارش‌های بالای ۵ میلیون تومان',
+      madeIn: 'تایوان',
       categoryId: computers.id,
     },
   });
 
   const smartphone = await prisma.product.create({
     data: {
-      name: 'Smartphone Ultra 5G',
-      description: '6.7" AMOLED display, 5G capable, triple camera system, 256GB storage',
-      price: 899.99,
+      name: 'گوشی هوشمند اولترا ۵G',
+      description:
+        'نمایشگر ۶.۷ اینچ AMOLED، پشتیبانی از ۵G، دوربین سه‌گانه حرفه‌ای و حافظه داخلی ۲۵۶ گیگابایت.',
+      price: 32990000,
       sku: 'PHONE-ULTRA-001',
       quantity: 100,
-      brand: 'TechMobile',
-      model: 'Ultra-2024',
-      images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9'],
-      tags: ['smartphone', '5g', 'premium'],
+      brand: 'موبایل‌پلاس',
+      model: 'Ultra-1403',
+      images: ['/media/seed/phone.svg'],
+      tags: ['گوشی', '۵G', 'پرچمدار'],
       isFeatured: true,
-      warranty: '1 year manufacturer warranty',
+      warranty: 'گارانتی ۱۸ ماهه',
       categoryId: electronics.id,
     },
   });
 
   const tshirt = await prisma.product.create({
     data: {
-      name: 'Premium Cotton T-Shirt',
-      description: '100% organic cotton, comfortable fit, perfect for everyday wear',
-      price: 29.99,
-      originalPrice: 39.99,
-      discountPercentage: 25,
+      name: 'تی‌شرت نخی پریمیوم',
+      description: '۱۰۰٪ نخ ارگانیک، دوخت با کیفیت، مناسب استفاده روزمره و چهار فصل.',
+      price: 890000,
+      originalPrice: 1190000,
+      discountPercentage: 25.21,
       sku: 'SHIRT-COTTON-001',
       quantity: 200,
-      brand: 'EcoWear',
+      brand: 'پوشاک اصیل',
       size: 'M',
-      tags: ['clothing', 't-shirt', 'cotton', 'casual'],
+      tags: ['پوشاک', 'تی‌شرت', 'نخی', 'روزمره'],
+      images: ['/media/seed/tshirt.svg'],
       categoryId: clothing.id,
     },
   });
 
   const coffeemaker = await prisma.product.create({
     data: {
-      name: 'Smart Coffee Maker',
-      description: 'WiFi-enabled coffee maker with app control, programmable brewing',
-      price: 149.99,
+      name: 'قهوه‌ساز هوشمند',
+      description: 'قهوه‌ساز متصل به وای‌فای با کنترل از طریق اپلیکیشن و برنامه‌ریزی زمان دم‌آوری.',
+      price: 6990000,
       sku: 'HOME-COFFEE-001',
       quantity: 75,
-      brand: 'BrewMaster',
-      tags: ['home', 'kitchen', 'coffee', 'smart'],
+      brand: 'دم‌نوش',
+      tags: ['خانه', 'آشپزخانه', 'قهوه', 'هوشمند'],
+      images: ['/media/seed/coffee.svg'],
       categoryId: homeGarden.id,
     },
   });
 
-  console.log('✅ Seeded products');
+  console.log('✅ محصولات ایجاد شدند');
   return { laptop, smartphone, tshirt, coffeemaker };
 }
 
@@ -196,21 +202,20 @@ async function seedOrderWithRelations(customerId: string, productId: string) {
       orderNumber: `ORD-${Date.now()}`,
       status: OrderStatus.DELIVERED,
       paymentStatus: PaymentStatus.COMPLETED,
-      subtotal: 899.99,
-      tax: 72.0,
-      shipping: 15,
-      total: 986.99,
-      shippingAddress: '456 Customer Ave, Los Angeles, CA 90001',
-      billingAddress: '456 Customer Ave, Los Angeles, CA 90001',
-      shippingFirstName: 'John',
-      shippingLastName: 'Doe',
-      shippingPhone: '+1-555-0101',
+      subtotal: 32990000,
+      tax: 2639200,
+      shipping: 350000,
+      total: 35979200,
+      shippingAddress: 'اصفهان، خیابان چهارباغ عباسی، کوچه گلستان، پلاک ۴۵',
+      billingAddress: 'اصفهان، خیابان چهارباغ عباسی، کوچه گلستان، پلاک ۴۵',
+      shippingFirstName: 'علی',
+      shippingLastName: 'رضایی',
+      shippingPhone: '09121234567',
       shippingEmail: 'customer@example.com',
       shippingMethod: ShippingMethod.STANDARD,
-      paymentMethod: 'stripe',
-      paymentIntentId: 'pi_test_seed',
-      trackingNumber: '1Z999AA10123456784',
-      carrier: 'UPS',
+      paymentMethod: 'cash',
+      trackingNumber: 'IR-1403123456789',
+      carrier: 'پست پیشتاز',
       itemCount: 1,
       paidAt: new Date(),
       shippedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
@@ -223,18 +228,23 @@ async function seedOrderWithRelations(customerId: string, productId: string) {
       orderId: order.id,
       productId,
       quantity: 1,
-      price: 899.99,
-      subtotal: 899.99,
-      total: 899.99,
+      price: 32990000,
+      subtotal: 32990000,
+      total: 32990000,
     },
   });
 
-  console.log('✅ Seeded order');
+  console.log('✅ سفارش نمونه ایجاد شد');
   return order;
 }
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  if (process.env.RUN_SEED !== 'true') {
+    console.log('Seed رد شد (برای اجرا RUN_SEED=true تنظیم کنید).');
+    return;
+  }
+
+  console.log('🌱 شروع seed پایگاه داده...');
   await resetDatabase();
 
   const { admin, customer } = await seedUsers();
@@ -245,18 +255,10 @@ async function main() {
     data: [
       {
         userId: customer.id,
-        productId: products.laptop.id,
-        rating: 5,
-        title: 'Excellent Gaming Performance',
-        comment: 'RTX 4080 handles all modern games at high settings.',
-        isVerifiedPurchase: true,
-      },
-      {
-        userId: customer.id,
         productId: products.smartphone.id,
         rating: 4,
-        title: 'Great Phone, Minor Issues',
-        comment: 'Camera quality is great, battery could be better.',
+        title: 'گوشی عالی با چند نکته جزئی',
+        comment: 'کیفیت دوربین واقعاً خوب است و صفحه‌نمایش شفاف است. فقط دوام باتری در استفاده سنگین کمی کمتر از انتظار بود.',
         isVerifiedPurchase: true,
       },
     ],
@@ -266,21 +268,21 @@ async function main() {
     data: {
       userId: customer.id,
       isActive: true,
-      totalAmount: 1329.98,
+      totalAmount: 53880000,
       itemCount: 2,
       items: {
         create: [
           {
             productId: products.laptop.id,
             quantity: 1,
-            price: 1299.99,
-            subtotal: 1299.99,
+            price: 52990000,
+            subtotal: 52990000,
           },
           {
             productId: products.tshirt.id,
             quantity: 1,
-            price: 29.99,
-            subtotal: 29.99,
+            price: 890000,
+            subtotal: 890000,
           },
         ],
       },
@@ -293,7 +295,7 @@ async function main() {
     data: {
       userId: customer.id,
       productId: products.coffeemaker.id,
-      note: 'For new apartment',
+      note: 'برای آشپزخانه خانه جدید',
       priority: 1,
     },
   });
@@ -302,29 +304,29 @@ async function main() {
     data: [
       {
         userId: customer.id,
-        title: 'Order Delivered',
-        message: `Your order #${order.orderNumber} has been delivered!`,
+        title: 'سفارش تحویل شد',
+        message: `سفارش شما با شماره ${order.orderNumber} با موفقیت تحویل داده شد.`,
         type: NotificationType.ORDER_DELIVERED,
         priority: NotificationPriority.HIGH,
       },
       {
         userId: customer.id,
-        title: 'Price Drop Alert',
-        message: 'The Gaming Laptop Pro 15 is now on sale!',
+        title: 'کاهش قیمت',
+        message: 'لپ‌تاپ گیمینگ پرو ۱۵ اکنون با تخفیف ویژه در فروشگاه موجود است.',
         type: NotificationType.PRICE_DROP,
         priority: NotificationPriority.MEDIUM,
       },
     ],
   });
 
-  console.log('\n🎉 Database seed complete!');
-  console.log('Admin credentials -> admin@ecommerce.com / Password123!');
-  console.log('Customer credentials -> customer@example.com / Password123!');
+  console.log('\n🎉 seed پایگاه داده با موفقیت انجام شد!');
+  console.log('حساب مدیر -> admin@ecommerce.com / Password123!');
+  console.log('حساب مشتری -> customer@example.com / Password123!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding database:', e);
+    console.error('❌ خطا در seed پایگاه داده:', e);
     process.exit(1);
   })
   .finally(async () => {

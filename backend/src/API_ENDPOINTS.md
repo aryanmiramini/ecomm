@@ -175,7 +175,7 @@ Create new order
   ],
   "shippingAddress": "123 Main St, City, State 12345",
   "billingAddress": "123 Main St, City, State 12345",
-  "paymentMethod": "stripe",
+  "paymentMethod": "cash",
   "notes": "Please deliver before 5 PM",
   "shipping": 10.00,
   "tax": 8.50
@@ -212,20 +212,6 @@ Delete order
 
 ### GET /orders/stats/overview (Admin only)
 Get order statistics
-
-## Payment Endpoints
-
-### POST /payments/create-payment-intent/:orderId
-Create Stripe payment intent for order
-
-### POST /payments/webhook
-Stripe webhook endpoint (for Stripe to call)
-
-### GET /payments/status/:orderId
-Get payment status for order
-
-### POST /payments/refund/:orderId (Admin only)
-Refund payment for order
 
 ## Review Endpoints
 

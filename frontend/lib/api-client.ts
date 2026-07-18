@@ -1,4 +1,5 @@
 import { mapCart, mapCategory, mapOrder, mapProduct } from "./api-mappers"
+import { coerceArray, unwrapNestedEnvelope } from "./api-unwrap"
 import type { CartSummary, Category, DashboardStats, Order, Product, User, UserProfile } from "./types"
 
 const API_BASE_URL = "/api"
@@ -145,9 +146,7 @@ export class ApiClient {
 
     const response = await this.fetchApi<ApiResponse>(`/products${searchParams.toString() ? `?${searchParams}` : ""}`)
     
-    const products = Array.isArray(response.data) 
-      ? response.data.map(mapProduct) 
-      : []
+    const products = coerceArray(response.data ?? response).map(mapProduct)
     
     const filteredProducts = params.featured 
       ? products.filter((p) => p.featured) 
@@ -195,9 +194,7 @@ export class ApiClient {
   // Categories
   async getCategories() {
     const response = await this.fetchApi<ApiResponse>("/categories")
-    const categories = Array.isArray(response.data) 
-      ? response.data.map(mapCategory)
-      : []
+    const categories = coerceArray(response.data ?? response).map(mapCategory)
     return { categories }
   }
 
@@ -239,9 +236,7 @@ export class ApiClient {
   async getOrders() {
     const response = await this.fetchApi<ApiResponse>("/orders")
     return {
-      orders: Array.isArray(response.data) 
-        ? response.data.map(mapOrder) 
-        : [],
+      orders: coerceArray(response.data ?? response).map(mapOrder),
       total: response.total ?? 0,
       page: response.page ?? 1,
       limit: response.limit ?? 10,
@@ -252,9 +247,7 @@ export class ApiClient {
     const response = await this.fetchApi<ApiResponse | any[]>("/orders/my-orders")
     const ordersData = Array.isArray(response) ? response : response?.data
     return {
-      orders: Array.isArray(ordersData)
-        ? ordersData.map(mapOrder)
-        : [],
+      orders: coerceArray(ordersData).map(mapOrder),
     }
   }
 
@@ -264,10 +257,15 @@ export class ApiClient {
     return { order: mapOrder(orderData) }
   }
 
-  async createOrder(data: any) {
+  async createOrder(data: any, idempotencyKey?: string) {
+    const headers: Record<string, string> = {}
+    if (idempotencyKey) {
+      headers["Idempotency-Key"] = idempotencyKey
+    }
     const response = await this.fetchApi<ApiResponse>("/orders", {
       method: "POST",
       body: JSON.stringify(data),
+      headers,
     })
     return response.data
   }
@@ -292,16 +290,16 @@ export class ApiClient {
   // Dashboard
   async getDashboardStats(): Promise<{ stats: DashboardStats }> {
     const response = await this.fetchApi<ApiResponse>("/admin/dashboard")
-    const data = response.data || {}
-    return { 
+    const data = unwrapNestedEnvelope<Record<string, unknown>>(response.data ?? response)
+    return {
       stats: {
-        totalOrders: data.totalOrders || 0,
-        totalRevenue: Number(data.totalRevenue || 0),
-        totalProducts: data.totalProducts || 0,
-        totalCustomers: data.totalCustomers || 0,
-        recentOrders: data.recentOrders || [],
-        topProducts: data.topProducts || [],
-      } 
+        totalOrders: Number(data.totalOrders ?? 0),
+        totalRevenue: Number(data.totalRevenue ?? 0),
+        totalProducts: Number(data.totalProducts ?? 0),
+        totalCustomers: Number(data.totalCustomers ?? 0),
+        recentOrders: coerceArray(data.recentOrders).map(mapOrder),
+        topProducts: coerceArray(data.topProducts).map(mapProduct),
+      },
     }
   }
 
@@ -341,12 +339,32 @@ export class ApiClient {
     return response
   }
 
+  async mergeCart(items: Array<{ productId: string; quantity: number }>) {
+    const response = await this.fetchApi<ApiResponse>("/cart/merge", {
+      method: "POST",
+      body: JSON.stringify({ items }),
+    })
+    return response.data
+  }
+
+  async requestOtp(phone: string) {
+    return this.fetchApi<any>("/auth/request-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    })
+  }
+
+  async verifyOtp(phone: string, code: string) {
+    return this.fetchApi<any>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone, code }),
+    })
+  }
+
   // Users
   async getUsers(): Promise<{ users: User[] }> {
     const response = await this.fetchApi<ApiResponse>("/users")
-    const users = Array.isArray(response.data) 
-      ? response.data.map(mapUser) 
-      : []
+    const users = coerceArray(response.data).map(mapUser)
     return { users }
   }
 
@@ -367,9 +385,9 @@ export class ApiClient {
 
   async getProfile(): Promise<{ profile: UserProfile }> {
     const response = await this.fetchApi<ApiResponse>("/users/profile")
-    const data = response.data || response
+    const data = unwrapNestedEnvelope<any>(response.data ?? response)
 
-    if (!data || !data.id) {
+    if (!data?.id) {
       throw new Error("پروفایل کاربر یافت نشد")
     }
     
@@ -424,11 +442,9 @@ export class ApiClient {
   // Wishlist
   async getWishlist() {
     const response = await this.fetchApi<ApiResponse>("/wishlist")
-    const products = Array.isArray(response.data)
-      ? response.data
-          .map((item: any) => mapProduct(item?.product ?? item))
-          .filter((item: Product) => Boolean(item.id))
-      : []
+    const products = coerceArray(response.data)
+      .map((item: any) => mapProduct(item?.product ?? item))
+      .filter((item: Product) => Boolean(item.id))
     return { products }
   }
 
@@ -459,7 +475,11 @@ export class ApiClient {
     const response = await this.fetchApi<ApiResponse>(
       `/notifications${unreadOnly ? "?unreadOnly=true" : ""}`
     )
-    return { notifications: response.data || [] }
+    const notifications = coerceArray(response.data ?? response).map((n: any) => ({
+      ...n,
+      isRead: n.isRead ?? n.read ?? false,
+    }))
+    return { notifications }
   }
 
   async markNotificationRead(id: string) {
@@ -479,7 +499,7 @@ export class ApiClient {
   // Reviews
   async getProductReviews(productId: string) {
     const response = await this.fetchApi<ApiResponse>(`/reviews/products/${productId}`)
-    return { reviews: response.data || [] }
+    return { reviews: coerceArray(response.data ?? response) }
   }
 
   async addReview(productId: string, data: { rating: number; comment: string }) {

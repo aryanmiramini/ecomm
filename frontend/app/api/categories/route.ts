@@ -1,11 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
 
-// GET all categories
 export async function GET() {
   try {
     const response = await backendFetch<any>("/categories")
-    const categories = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
+    const categories = coerceArray(unwrapNestData(response))
     return NextResponse.json({ data: categories, success: true })
   } catch (error: any) {
     return NextResponse.json(

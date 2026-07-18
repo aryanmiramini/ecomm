@@ -23,7 +23,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
   const loadReviews = async () => {
     try {
       const res = await apiClient.getProductReviews(productId)
-      setReviews(res.reviews)
+      setReviews(Array.isArray(res.reviews) ? res.reviews : [])
     } catch (error) {
       console.error("Error loading reviews", error)
     } finally {

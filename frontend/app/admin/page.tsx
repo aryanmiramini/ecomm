@@ -134,6 +134,9 @@ export default function AdminDashboard() {
     },
   ]
 
+  const recentOrders = Array.isArray(stats?.recentOrders) ? stats.recentOrders : []
+  const topProducts = Array.isArray(stats?.topProducts) ? stats.topProducts : []
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -179,8 +182,8 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats?.recentOrders?.length > 0 ? (
-                stats.recentOrders.slice(0, 5).map((order: any) => (
+              {recentOrders.length > 0 ? (
+                recentOrders.slice(0, 5).map((order: any) => (
                   <div
                     key={order.id}
                     className="flex items-center justify-between rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
@@ -217,8 +220,8 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats?.topProducts?.length > 0 ? (
-                stats.topProducts.slice(0, 5).map((product: any) => (
+              {topProducts.length > 0 ? (
+                topProducts.slice(0, 5).map((product: any) => (
                   <div key={product.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50">
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                       <img

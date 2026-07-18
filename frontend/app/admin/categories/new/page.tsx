@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { ImageUpload } from "@/components/admin/image-upload"
 import { toast } from "sonner"
 import { apiClient } from "@/lib/api-client"
 
@@ -59,8 +60,13 @@ export default function NewCategoryPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>آدرس تصویر</Label>
-              <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+              <Label>تصویر</Label>
+              <ImageUpload
+                maxImages={1}
+                value={form.image ? [form.image] : []}
+                onChange={(urls) => setForm({ ...form, image: urls[0] || "" })}
+                onRemove={() => setForm({ ...form, image: "" })}
+              />
             </div>
             <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? "در حال ایجاد..." : "ایجاد دسته‌بندی"}
@@ -71,4 +77,3 @@ export default function NewCategoryPage() {
     </div>
   )
 }
-

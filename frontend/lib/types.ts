@@ -87,18 +87,19 @@ export interface User {
 
 export interface UserProfile {
   id: string
-  email: string | null
-  phone: string | null
+  email?: string | null
+  phone?: string | null
   firstName?: string | null
   lastName?: string | null
+  role: "ADMIN" | "CUSTOMER"
+  address?: string | null
   shippingAddress?: string | null
   billingAddress?: string | null
   city?: string | null
   state?: string | null
   postalCode?: string | null
   country?: string | null
-  role: "ADMIN" | "CUSTOMER"
-  createdAt: string
+  createdAt?: string
 }
 
 export interface DashboardStats {

@@ -10,105 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ShoppingCart, Star, Search, SlidersHorizontal, Grid3X3, LayoutList, Package } from "lucide-react"
+import { ProductCard } from "@/components/product-card"
 import { apiClient } from "@/lib/api-client"
 import type { Product } from "@/lib/types"
 import { useCart } from "@/components/cart/cart-provider"
 import { toast } from "sonner"
-
-function ProductCard({ product, onAddToCart, isAdding }: { 
-  product: Product
-  onAddToCart: (id: string) => void
-  isAdding: boolean 
-}) {
-  const displayPrice = product.discountPrice || product.price
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price
-  const discountPercent = hasDiscount 
-    ? Math.round(((product.price - product.discountPrice!) / product.price) * 100)
-    : 0
-
-  return (
-    <Card className="group relative overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 bg-card">
-      <Link href={`/products/${product.id}`} className="block">
-        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-muted to-muted/50">
-          <img
-            src={product.image || "/placeholder.svg"}
-            alt={product.nameFa}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-          {/* Badges */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2">
-            {hasDiscount && (
-              <Badge className="bg-red-500 hover:bg-red-600 text-white shadow-lg">
-                {discountPercent}% تخفیف
-              </Badge>
-            )}
-            {product.featured && (
-              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg">
-                ویژه
-              </Badge>
-            )}
-          </div>
-          
-          {/* Quick Add Overlay */}
-          <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4">
-            <Button
-              size="sm"
-              className="w-full gap-2 shadow-lg"
-              disabled={isAdding || product.stock === 0}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onAddToCart(product.id)
-              }}
-            >
-              <ShoppingCart className="h-4 w-4" />
-              {product.stock === 0 ? "ناموجود" : isAdding ? "در حال افزودن..." : "افزودن به سبد"}
-            </Button>
-          </div>
-        </div>
-      </Link>
-
-      <CardContent className="p-4">
-        <Link href={`/products/${product.id}`}>
-          <Badge variant="secondary" className="mb-2 text-xs">{product.categoryFa}</Badge>
-          <h3 className="font-semibold text-card-foreground line-clamp-1 mb-1 group-hover:text-primary transition-colors">
-            {product.nameFa}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3 h-10">
-            {product.descriptionFa}
-          </p>
-        </Link>
-
-        <div className="flex items-center justify-between border-t pt-3">
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-primary">
-              {displayPrice.toLocaleString('fa-IR')} تومان
-            </span>
-            {hasDiscount && (
-              <span className="text-xs text-muted-foreground line-through">
-                {product.price.toLocaleString('fa-IR')} تومان
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-full">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
-              {(product.rating ?? 0).toFixed(1)}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-2 text-xs text-muted-foreground">
-          {product.stock > 0 ? (
-            <span className="text-green-600">موجود ({product.stock} عدد)</span>
-          ) : (
-            <span className="text-red-500">ناموجود</span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 function ProductSkeleton() {
   return (
@@ -141,6 +47,9 @@ function ProductsContent() {
   const activeSearch = searchParams.get("search") ?? ""
   const activeSort = (searchParams.get("sort") as "newest" | "price-low" | "price-high" | "popular" | null) ?? "newest"
   const activeCategory = searchParams.get("categoryId") ?? ""
+  const activePage = Number(searchParams.get("page") ?? "1")
+  const pageSize = 24
+  const totalPages = Math.max(1, Math.ceil(totalProducts / pageSize))
 
   useEffect(() => {
     setSearchValue(activeSearch)
@@ -154,7 +63,8 @@ function ProductsContent() {
           search: activeSearch || undefined,
           sort: activeSort,
           categoryId: activeCategory || undefined,
-          limit: 24,
+          page: activePage,
+          limit: pageSize,
         })
         setProducts(response.products)
         setTotalProducts(response.total)
@@ -166,7 +76,7 @@ function ProductsContent() {
       }
     }
     loadProducts()
-  }, [activeSearch, activeSort, activeCategory])
+  }, [activeSearch, activeSort, activeCategory, activePage])
 
   const handleSearchSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -186,6 +96,14 @@ function ProductsContent() {
     } else {
       next.set("sort", value)
     }
+    next.delete("page")
+    router.push(`/products?${next.toString()}`)
+  }
+
+  const goToPage = (page: number) => {
+    const next = new URLSearchParams(searchParams.toString())
+    if (page <= 1) next.delete("page")
+    else next.set("page", String(page))
     router.push(`/products?${next.toString()}`)
   }
 
@@ -317,6 +235,20 @@ function ProductsContent() {
               : "محصولی در این دسته‌بندی وجود ندارد"}
           </p>
           <Button onClick={clearFilters}>مشاهده همه محصولات</Button>
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div className="mt-10 flex items-center justify-center gap-3">
+          <Button variant="outline" disabled={activePage <= 1} onClick={() => goToPage(activePage - 1)}>
+            قبلی
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            صفحه {activePage.toLocaleString("fa-IR")} از {totalPages.toLocaleString("fa-IR")}
+          </span>
+          <Button variant="outline" disabled={activePage >= totalPages} onClick={() => goToPage(activePage + 1)}>
+            بعدی
+          </Button>
         </div>
       )}
     </div>

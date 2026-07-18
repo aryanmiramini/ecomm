@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   Query,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
@@ -29,8 +30,12 @@ export class OrdersController {
   @Post()
   @ApiOperation({ summary: 'Create a new order' })
   @ApiResponse({ status: 201, description: 'Order created successfully' })
-  create(@Request() req, @Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.createOrder(req.user.id, createOrderDto);
+  create(
+    @Request() req,
+    @Body() createOrderDto: CreateOrderDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.ordersService.createOrder(req.user.id, createOrderDto, idempotencyKey);
   }
 
   @UseGuards(RolesGuard)
@@ -54,6 +59,13 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'List of user orders' })
   findMyOrders(@Request() req) {
     return this.ordersService.findUserOrders(req.user.id);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Get('stats/overview')
+  getStats() {
+    return this.ordersService.getOrderStats();
   }
 
   @Get(':id')
@@ -82,12 +94,5 @@ export class OrdersController {
   @ApiParam({ name: 'id', description: 'Order UUID', example: '123e4567-e89b-12d3-a456-426614174000' })
   remove(@Param('id') id: string) {
     return this.ordersService.removeOrder(id);
-  }
-
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Get('stats/overview')
-  getStats() {
-    return this.ordersService.getOrderStats();
   }
 }

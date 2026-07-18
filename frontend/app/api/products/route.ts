@@ -1,20 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
 
 export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.toString()
     const response = await backendFetch<any>(`/products${search ? `?${search}` : ""}`)
-    
-    // Ensure consistent format
-    const products = Array.isArray(response?.data) ? response.data : []
-    
+    const payload = unwrapNestData(response) as { data?: unknown[]; total?: number; page?: number; limit?: number }
+    const products = coerceArray(payload?.data ?? payload)
+
     return NextResponse.json({
       success: true,
       data: products,
-      total: response?.total || products.length,
-      page: response?.page || 1,
-      limit: response?.limit || 10,
+      total: response?.total ?? payload?.total ?? products.length,
+      page: response?.page ?? payload?.page ?? 1,
+      limit: response?.limit ?? payload?.limit ?? 10,
     })
   } catch (error: any) {
     return NextResponse.json(

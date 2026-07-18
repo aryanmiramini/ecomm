@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
 
 export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.toString()
-    const data = await backendFetch(`/notifications${search ? `?${search}` : ""}`, {}, { requireAuth: true })
+    const raw = await backendFetch(`/notifications${search ? `?${search}` : ""}`, {}, { requireAuth: true })
+    const data = coerceArray(unwrapNestData(raw))
     return NextResponse.json({ data, success: true })
   } catch (error: any) {
     return NextResponse.json(

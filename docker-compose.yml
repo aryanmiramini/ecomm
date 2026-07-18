@@ -1,14 +1,12 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
     container_name: roider-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD:-StrongPassword123}
       POSTGRES_DB: ecommerce_db
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -21,9 +19,10 @@ services:
 
   backend:
     build:
-      context: ./source
+      context: ./backend
       dockerfile: Dockerfile
       args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-alpine}
         DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-StrongPassword123}@postgres:5432/ecommerce_db?schema=public
     container_name: roider-backend
     restart: unless-stopped
@@ -45,6 +44,7 @@ services:
       MEDIA_PATH: /app/media
       RATE_LIMIT_TTL: ${RATE_LIMIT_TTL:-60}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RUN_SEED: ${RUN_SEED:-false}
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
       SUPER_ADMIN_PHONE: ${SUPER_ADMIN_PHONE:-}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
@@ -54,7 +54,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./source/media:/app/media
+      - ./backend/media:/app/media
     networks:
       - roider-network
     healthcheck:
@@ -72,7 +72,6 @@ services:
     command: >
       sh -c "
         npx prisma migrate deploy &&
-        npm run prisma:seed:prod &&
         node dist/main
       "
 
@@ -80,6 +79,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-alpine}
     container_name: roider-frontend
     restart: unless-stopped
     depends_on:
@@ -89,6 +90,7 @@ services:
       BACKEND_API_URL: http://backend:3000/api
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
       NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3000}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production-min-32-chars}
       NODE_ENV: production
     ports:
       - "3001:3000"

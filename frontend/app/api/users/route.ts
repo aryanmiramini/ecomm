@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server"
-import { backendFetch, BackendRequestError } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
 
 export async function GET() {
   try {
     const response = await backendFetch<any>("/users", {}, { requireAuth: true })
-    
-    // Ensure consistent format - backend returns array directly
-    const users = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : []
-    
+    const users = coerceArray(unwrapNestData(response))
     return NextResponse.json({ data: users, success: true })
   } catch (error: any) {
     return NextResponse.json(

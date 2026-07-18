@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ensureSuperAdmin } from './bootstrap/super-admin.bootstrap';
 import { HttpExceptionFilter } from './common/http-exception.filter';
@@ -12,6 +13,8 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
+
+  app.use(helmet());
 
   app.useStaticAssets(join(process.cwd(), 'media'), {
     prefix: '/media/',
@@ -24,11 +27,16 @@ async function bootstrap() {
         .map((s) => s.trim())
         .filter(Boolean)
     : [];
+
+  if (origins.length === 0) {
+    throw new Error('CORS_ORIGIN must be set explicitly');
+  }
+
   app.enableCors({
-    origin: origins.length ? origins : true,
+    origin: origins,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language', 'Idempotency-Key'],
   });
 
   app.useGlobalInterceptors(new ResponseInterceptor());
@@ -57,50 +65,54 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const config = new DocumentBuilder()
-    .setTitle('E-Commerce API')
-    .setDescription('Complete e-commerce backend API with authentication (SMS OTP), products, orders, and more')
-    .setVersion('1.0')
-    .addTag('Authentication', 'User registration and login endpoints')
-    .addTag('Users', 'User management endpoints')
-    .addTag('Products', 'Product and category management')
-    .addTag('Cart', 'Shopping cart operations')
-    .addTag('Orders', 'Order management and tracking')
-    .addTag('Reviews', 'Product reviews and ratings')
-    .addTag('Wishlist', 'Wishlist management')
-    .addTag('Notifications', 'User notifications')
-    .addTag('Public', 'Public storefront data')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
+  if (configService.get<string>('NODE_ENV') !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('E-Commerce API')
+      .setDescription('Complete e-commerce backend API with authentication (SMS OTP), products, orders, and more')
+      .setVersion('1.0')
+      .addTag('Authentication', 'User registration and login endpoints')
+      .addTag('Users', 'User management endpoints')
+      .addTag('Products', 'Product and category management')
+      .addTag('Cart', 'Shopping cart operations')
+      .addTag('Orders', 'Order management and tracking')
+      .addTag('Reviews', 'Product reviews and ratings')
+      .addTag('Wishlist', 'Wishlist management')
+      .addTag('Notifications', 'User notifications')
+      .addTag('Public', 'Public storefront data')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'JWT',
+          description: 'Enter JWT token',
+          in: 'header',
+        },
+        'JWT-auth',
+      )
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      customSiteTitle: 'E-Commerce API Documentation',
+      customfavIcon: 'https://nestjs.com/img/logo-small.svg',
+      customCss: '.swagger-ui .topbar { display: none }',
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+        filter: true,
+        showRequestDuration: true,
       },
-      'JWT-auth',
-    )
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'E-Commerce API Documentation',
-    customfavIcon: 'https://nestjs.com/img/logo-small.svg',
-    customCss: '.swagger-ui .topbar { display: none }',
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'none',
-      filter: true,
-      showRequestDuration: true,
-    },
-  });
-  
+    });
+  }
+
   await ensureSuperAdmin(app);
 
-  const port = process.env.PORT || 3000;
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api`);
-  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  if (configService.get<string>('NODE_ENV') !== 'production') {
+    console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  }
 }
 bootstrap();

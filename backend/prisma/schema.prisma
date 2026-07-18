@@ -199,6 +199,10 @@ model Product {
   cartItems           CartItem[]
   wishlist            Wishlist[]
 
+  @@index([categoryId])
+  @@index([isActive, createdAt])
+  @@index([isActive, price])
+  @@index([isFeatured])
   @@map("products")
 }
 
@@ -225,7 +229,7 @@ model Order {
   shippingEmail           String?
   shippingMethod          ShippingMethod  @default(STANDARD)
   paymentMethod           String?
-  paymentIntentId         String?
+  idempotencyKey          String?         @unique
   trackingNumber          String?
   carrier                 String?
   trackingUrl             String?
@@ -249,6 +253,8 @@ model Order {
   // Relations
   items                   OrderItem[]
 
+  @@index([userId, createdAt])
+  @@index([status])
   @@map("orders")
 }
 
@@ -269,6 +275,8 @@ model OrderItem {
   productId           String   @db.Uuid
   product             Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -292,6 +300,8 @@ model Cart {
   // Relations
   items       CartItem[]
 
+  @@unique([userId])
+  @@index([userId])
   @@map("carts")
 }
 
@@ -310,6 +320,8 @@ model CartItem {
   productId String   @db.Uuid
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@unique([cartId, productId])
+  @@index([productId])
   @@map("cart_items")
 }
 
@@ -339,6 +351,8 @@ model Review {
   productId          String   @db.Uuid
   product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, productId])
+  @@index([productId])
   @@map("reviews")
 }
 
@@ -384,5 +398,6 @@ model Notification {
   userId      String               @db.Uuid
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, read])
   @@map("notifications")
 }

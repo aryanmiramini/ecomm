@@ -52,8 +52,8 @@ README.md
 *.md
 !prisma/*.md
 
-# Uploads (will be mounted as volume)
-uploads/
+# Media (mounted as Docker volume)
+media/
 
 # Prisma (keep schema and migrations)
 # We want to keep prisma folder

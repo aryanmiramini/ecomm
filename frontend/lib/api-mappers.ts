@@ -1,46 +1,5 @@
 import type { Product, Category, Order, OrderItem, CartItem, CartSummary } from "@/lib/types"
-
-const placeholderImage = "/placeholder.svg"
-
-// Backend URL for serving media files
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000"
-
-/**
- * Resolves an image URL to a full URL
- * - If it starts with /media, prepend the backend URL
- * - If it's already a full URL (http/https), return as-is
- * - If it's empty or undefined, return placeholder
- */
-function resolveImageUrl(url: string | undefined | null): string {
-  if (!url) return placeholderImage
-  
-  // Already a full URL
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
-  }
-  
-  // Media URL from our backend
-  if (url.startsWith('/media/')) {
-    return `${BACKEND_URL}${url}`
-  }
-  
-  // Local public file or placeholder
-  if (url.startsWith('/')) {
-    return url
-  }
-  
-  return placeholderImage
-}
-
-/**
- * Resolves an array of image URLs
- */
-function resolveImageUrls(urls: string[] | undefined | null): string[] {
-  if (!urls || !Array.isArray(urls) || urls.length === 0) {
-    return []
-  }
-  return urls.map(resolveImageUrl)
-}
+import { PLACEHOLDER_IMAGE, resolveMediaUrl, resolveMediaUrls } from "@/lib/media"
 
 export function mapProduct(product: any): Product {
   const price = Number(product.originalPrice ?? product.price ?? 0)
@@ -49,8 +8,8 @@ export function mapProduct(product: any): Product {
       ? Number(product.price)
       : undefined
 
-  const images = resolveImageUrls(product.images)
-  const mainImage = images[0] || placeholderImage
+  const images = resolveMediaUrls(product.images)
+  const mainImage = images[0] || PLACEHOLDER_IMAGE
   
   // Extract categoryId from product.categoryId or product.category.id
   const categoryId = product.categoryId || product.category?.id || ""
@@ -94,7 +53,7 @@ export function mapCategory(category: any): Category {
     nameFa: category.name,
     description: category.description || "",
     descriptionFa: category.description || "",
-    image: resolveImageUrl(category.image),
+    image: resolveMediaUrl(category.image),
     productCount,
   }
 }
@@ -122,7 +81,7 @@ function mapOrderItems(items: any[] = []): OrderItem[] {
       productNameFa: item.product?.name || "محصول",
       quantity: qty,
       price: lineTotal,
-      image: resolveImageUrl(
+      image: resolveMediaUrl(
         Array.isArray(item.product?.images) && item.product.images.length > 0
           ? item.product.images[0]
           : item.product?.image,
@@ -181,7 +140,7 @@ export function mapCart(response: any): CartSummary {
           productId: product.id || item.productId,
           name: product.name || item.name || "محصول",
           nameFa: product.name || item.name || "محصول",
-          image: resolveImageUrl(product.images?.[0] || item.image),
+          image: resolveMediaUrl(product.images?.[0] || item.image),
           quantity,
           price,
           total: subtotal,

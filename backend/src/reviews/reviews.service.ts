@@ -5,6 +5,7 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 import { UsersService } from '../users/users.service';
 import { ProductsService } from '../products/products.service';
 import { OrderStatus } from '@prisma/client';
+import { SAFE_USER_SELECT } from '../common/user.select';
 
 @Injectable()
 export class ReviewsService {
@@ -106,7 +107,11 @@ export class ReviewsService {
       throw new NotFoundException('Product not found');
     }
 
-    return this.prisma.review.findMany({ where: { productId }, include: { user: true }, orderBy: { createdAt: 'desc' } });
+    return this.prisma.review.findMany({
+      where: { productId },
+      include: { user: { select: SAFE_USER_SELECT } },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async getUserReviews(userId: string): Promise<any[]> {

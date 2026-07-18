@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import { MergeCartDto } from './dto/merge-cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Cart')
@@ -21,6 +22,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
+
+  @Post('merge')
+  @ApiOperation({ summary: 'Merge guest cart items into authenticated cart' })
+  mergeItems(@Request() req, @Body() mergeCartDto: MergeCartDto) {
+    return this.cartService.mergeItems(req.user.id, mergeCartDto.items || []);
+  }
 
   @Post('add')
   @ApiOperation({ summary: 'Add item to cart' })

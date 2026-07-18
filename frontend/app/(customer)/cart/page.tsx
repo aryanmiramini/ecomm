@@ -1,34 +1,50 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { StoreImage } from "@/components/store-image"
 import { useCart } from "@/components/cart/cart-provider"
 import { toast } from "sonner"
 
 export default function CartPage() {
   const { cart, loading, updateItem, removeItem, clear } = useCart()
   const [pendingItemId, setPendingItemId] = useState<string | null>(null)
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
-  const handleQuantityChange = async (itemId: string, nextQuantity: number) => {
-    if (!Number.isFinite(nextQuantity)) return
-    if (nextQuantity < 1) {
-      await handleRemove(itemId)
-      return
-    }
-    try {
-      setPendingItemId(itemId)
-      await updateItem(itemId, nextQuantity)
-      toast.success("تعداد به‌روزرسانی شد")
-    } catch (error: any) {
-      toast.error(error?.message || "خطا در بروزرسانی تعداد")
-    } finally {
-      setPendingItemId(null)
-    }
+  const scheduleQuantityUpdate = (itemId: string, nextQuantity: number) => {
+    const existing = debounceTimers.current.get(itemId)
+    if (existing) clearTimeout(existing)
+
+    debounceTimers.current.set(
+      itemId,
+      setTimeout(async () => {
+        if (nextQuantity < 1) {
+          await handleRemove(itemId)
+          return
+        }
+        try {
+          setPendingItemId(itemId)
+          await updateItem(itemId, nextQuantity)
+        } catch (error: any) {
+          toast.error(error?.message || "خطا در بروزرسانی تعداد")
+        } finally {
+          setPendingItemId(null)
+        }
+      }, 400),
+    )
   }
+
+  useEffect(() => {
+    const timers = debounceTimers.current
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer))
+      timers.clear()
+    }
+  }, [])
 
   const handleRemove = async (itemId: string) => {
     try {
@@ -79,17 +95,16 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <Card key={item.id}>
               <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
-                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                  <img src={item.image || "/placeholder.svg"} alt={item.nameFa} className="h-full w-full object-cover" />
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                  <StoreImage src={item.image} alt={item.nameFa} />
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">{item.nameFa}</h3>
-                      <p className="text-sm text-muted-foreground">شناسه محصول: {item.productId}</p>
                     </div>
                     <p className="text-xl font-bold text-primary">
-                      {item.total.toLocaleString('fa-IR')} تومان
+                      {item.total.toLocaleString("fa-IR")} تومان
                     </p>
                   </div>
 
@@ -100,8 +115,9 @@ export default function CartPage() {
                         <Button
                           size="icon"
                           variant="outline"
+                          aria-label="کاهش تعداد"
                           disabled={pendingItemId === item.id}
-                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                          onClick={() => scheduleQuantityUpdate(item.id, item.quantity - 1)}
                         >
                           -
                         </Button>
@@ -113,14 +129,15 @@ export default function CartPage() {
                           onChange={(e) => {
                             const rawValue = e.target.value
                             if (rawValue === "") return
-                            handleQuantityChange(item.id, Number(rawValue))
+                            scheduleQuantityUpdate(item.id, Number(rawValue))
                           }}
                         />
                         <Button
                           size="icon"
                           variant="outline"
+                          aria-label="افزایش تعداد"
                           disabled={pendingItemId === item.id}
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                          onClick={() => scheduleQuantityUpdate(item.id, item.quantity + 1)}
                         >
                           +
                         </Button>
@@ -151,13 +168,9 @@ export default function CartPage() {
                 <span>تعداد اقلام</span>
                 <span>{cart.itemCount} محصول</span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span>تعداد کل</span>
-                <span>{cart.totalQuantity} عدد</span>
-              </div>
               <div className="flex items-center justify-between border-t border-border pt-4 text-lg font-bold">
-                <span>مبلغ قابل پرداخت</span>
-                <span className="text-primary">{cart.subtotal.toLocaleString('fa-IR')} تومان</span>
+                <span>جمع جزء</span>
+                <span className="text-primary">{cart.subtotal.toLocaleString("fa-IR")} تومان</span>
               </div>
 
               <div className="space-y-3 pt-2">
@@ -175,5 +188,3 @@ export default function CartPage() {
     </div>
   )
 }
-
-

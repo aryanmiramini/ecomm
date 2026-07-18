@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './dto';
+import { UpdateUserDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -11,13 +11,6 @@ import { UserRole } from '@prisma/client';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @Post()
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -55,7 +48,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    const { role, ...rest } = updateUserDto;
+    const { role, isActive, ...rest } = updateUserDto;
     return this.usersService.update(req.user.id, rest as UpdateUserDto);
   }
 

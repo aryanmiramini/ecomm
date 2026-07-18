@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,13 +12,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCart } from "@/components/cart/cart-provider"
 import { useAuth } from "@/components/auth/auth-provider"
 import { apiClient } from "@/lib/api-client"
+import { estimateOrderPricing } from "@/lib/order-pricing"
 import { toast } from "sonner"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, clear } = useCart()
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading, user } = useAuth()
   const [loading, setLoading] = useState(false)
+  const submittingRef = useRef(false)
+  const idempotencyKeyRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `checkout-${Date.now()}`,
+  )
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -30,16 +38,27 @@ export default function CheckoutPage() {
     notes: "",
   })
 
-  // Redirect to login if not authenticated when trying to checkout
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      // Store the intended destination
-      const returnUrl = encodeURIComponent("/checkout")
-      router.push(`/login?redirect=${returnUrl}`)
+      router.push(`/login?redirect=${encodeURIComponent("/checkout")}`)
     }
   }, [authLoading, isAuthenticated, router])
 
-  // Show loading while checking auth
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
+        phone: user.phone || prev.phone,
+        email: user.email || prev.email,
+        shippingAddress: user.shippingAddress || user.address || prev.shippingAddress,
+        city: user.city || prev.city,
+        postalCode: user.postalCode || prev.postalCode,
+      }))
+    }
+  }, [user])
+
   if (authLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -48,47 +67,48 @@ export default function CheckoutPage() {
     )
   }
 
-  // Don't render checkout if not authenticated (will redirect)
   if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="mb-4 text-3xl font-bold">لطفاً وارد شوید</h1>
-        <p className="text-muted-foreground">برای تکمیل خرید، ابتدا وارد حساب کاربری خود شوید.</p>
-      </div>
-    )
+    return null
   }
 
   if (!cart || cart.items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <h1 className="mb-4 text-3xl font-bold">سبد خرید شما خالی است</h1>
-        <p className="text-muted-foreground">برای ثبت سفارش ابتدا محصولی به سبد خرید اضافه کنید.</p>
+        <p className="mb-8 text-muted-foreground">برای ثبت سفارش ابتدا محصولی به سبد خرید اضافه کنید.</p>
+        <Button asChild>
+          <Link href="/products">مشاهده محصولات</Link>
+        </Button>
       </div>
     )
   }
 
+  const pricing = estimateOrderPricing(cart.subtotal)
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (cart.items.length === 0) return
+    if (cart.items.length === 0 || submittingRef.current) return
 
+    submittingRef.current = true
     setLoading(true)
     try {
-      const createdOrder = await apiClient.createOrder({
-        items: cart.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        })),
-        shippingAddress: formData.shippingAddress,
-        billingAddress: formData.shippingAddress,
-        shippingFirstName: formData.firstName,
-        shippingLastName: formData.lastName,
-        shippingPhone: formData.phone,
-        shippingEmail: formData.email,
-        city: formData.city,
-        postalCode: formData.postalCode,
-        paymentMethod: formData.paymentMethod,
-        notes: formData.notes,
-      })
+      const createdOrder = await apiClient.createOrder(
+        {
+          items: cart.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+          shippingAddress: formData.shippingAddress,
+          billingAddress: formData.shippingAddress,
+          shippingFirstName: formData.firstName,
+          shippingLastName: formData.lastName,
+          shippingPhone: formData.phone,
+          shippingEmail: formData.email,
+          paymentMethod: formData.paymentMethod,
+          notes: formData.notes,
+        },
+        idempotencyKeyRef.current,
+      )
       toast.success("سفارش با موفقیت ثبت شد")
       await clear()
       const orderId = createdOrder?.id || ""
@@ -99,9 +119,9 @@ export default function CheckoutPage() {
       query.set("paymentMethod", formData.paymentMethod)
       router.push(`/orders/success${query.toString() ? `?${query.toString()}` : ""}`)
     } catch (error: any) {
-      toast.error(error?.message || "خطا در ثبت سفارش")
-    } finally {
+      submittingRef.current = false
       setLoading(false)
+      toast.error(error?.message || "خطا در ثبت سفارش")
     }
   }
 
@@ -143,6 +163,7 @@ export default function CheckoutPage() {
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    dir="ltr"
                   />
                 </div>
                 <div className="space-y-2">
@@ -152,6 +173,7 @@ export default function CheckoutPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -182,6 +204,7 @@ export default function CheckoutPage() {
                     id="postalCode"
                     value={formData.postalCode}
                     onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -229,13 +252,25 @@ export default function CheckoutPage() {
                 <span>
                   {item.nameFa} × {item.quantity}
                 </span>
-                <span className="font-medium">{item.total.toLocaleString('fa-IR')} تومان</span>
+                <span className="font-medium">{item.total.toLocaleString("fa-IR")} تومان</span>
               </div>
             ))}
-            <div className="border-t border-border pt-4 text-lg font-bold">
-              <div className="flex items-center justify-between">
+            <div className="space-y-2 border-t border-border pt-4 text-sm">
+              <div className="flex justify-between">
+                <span>جمع جزء</span>
+                <span>{pricing.subtotal.toLocaleString("fa-IR")} تومان</span>
+              </div>
+              <div className="flex justify-between">
+                <span>مالیات</span>
+                <span>{pricing.tax.toLocaleString("fa-IR")} تومان</span>
+              </div>
+              <div className="flex justify-between">
+                <span>هزینه ارسال</span>
+                <span>{pricing.shipping.toLocaleString("fa-IR")} تومان</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold pt-2">
                 <span>مبلغ کل</span>
-                <span className="text-primary">{cart.subtotal.toLocaleString('fa-IR')} تومان</span>
+                <span className="text-primary">{pricing.total.toLocaleString("fa-IR")} تومان</span>
               </div>
             </div>
           </CardContent>

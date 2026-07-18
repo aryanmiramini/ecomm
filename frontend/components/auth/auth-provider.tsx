@@ -1,16 +1,17 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api-client"
 import type { UserProfile } from "@/lib/types"
-import { useRouter } from "next/navigation"
+import { sanitizeRedirectPath } from "@/lib/auth-server"
 
 type AuthContextType = {
   user: UserProfile | null
   loading: boolean
   isAuthenticated: boolean
-  login: (token?: string) => Promise<void> // Token is handled via cookies, but we might need to trigger re-fetch
-  logout: () => Promise<void>
+  login: () => Promise<void>
+  logout: (options?: { redirectTo?: string }) => Promise<void>
   refreshProfile: () => Promise<void>
 }
 
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { profile } = await apiClient.getProfile()
       setUser(profile)
-    } catch (error) {
+    } catch {
       setUser(null)
     } finally {
       setLoading(false)
@@ -33,21 +34,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    refreshProfile()
+    void refreshProfile()
   }, [])
 
   const login = async () => {
+    setLoading(true)
     await refreshProfile()
   }
 
-  const logout = async () => {
+  const logout = async (options?: { redirectTo?: string }) => {
     try {
       await apiClient.logout()
-      setUser(null)
-      router.push("/login")
-      router.refresh()
     } catch (error) {
       console.error("Logout error:", error)
+    } finally {
+      setUser(null)
+      setLoading(false)
+      router.push(options?.redirectTo || "/")
+      router.refresh()
     }
   }
 
@@ -73,4 +77,8 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
+}
+
+export function useSafeRedirect(redirectUrl: string | null) {
+  return sanitizeRedirectPath(redirectUrl)
 }

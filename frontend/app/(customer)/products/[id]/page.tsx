@@ -17,6 +17,9 @@ import { apiClient } from "@/lib/api-client"
 import { useCart } from "@/components/cart/cart-provider"
 import { useAuth } from "@/components/auth/auth-provider"
 import { toast } from "sonner"
+import { StoreImage } from "@/components/store-image"
+import { PLACEHOLDER_IMAGE } from "@/lib/media"
+import { ReviewsSection } from "@/components/reviews/reviews-section"
 import type { Product } from "@/lib/types"
 
 interface Review {
@@ -29,33 +32,28 @@ interface Review {
 
 function ProductImageGallery({ images, name }: { images: string[]; name: string }) {
   const [selectedImage, setSelectedImage] = useState(0)
-  const displayImages = images.length > 0 ? images : ["/placeholder.svg"]
+  const displayImages = images.length > 0 ? images : [PLACEHOLDER_IMAGE]
 
   return (
     <div className="space-y-4">
-      {/* Main Image */}
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
-        <img
-          src={displayImages[selectedImage]}
-          alt={name}
-          className="w-full h-full object-cover"
-        />
+        <StoreImage src={displayImages[selectedImage]} alt={name} priority />
       </div>
-      
-      {/* Thumbnail Gallery */}
+
       {displayImages.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {displayImages.map((img, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => setSelectedImage(i)}
-              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                selectedImage === i 
-                  ? "border-primary ring-2 ring-primary/20" 
+              className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                selectedImage === i
+                  ? "border-primary ring-2 ring-primary/20"
                   : "border-transparent opacity-70 hover:opacity-100"
               }`}
             >
-              <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
+              <StoreImage src={img} alt={`${name} ${i + 1}`} sizes="80px" />
             </button>
           ))}
         </div>
@@ -68,12 +66,8 @@ function RelatedProductCard({ product }: { product: Product }) {
   return (
     <Link href={`/products/${product.id}`}>
       <Card className="group overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all">
-        <div className="aspect-square overflow-hidden bg-muted">
-          <img 
-            src={product.image || "/placeholder.svg"} 
-            alt={product.nameFa} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-          />
+        <div className="relative aspect-square overflow-hidden bg-muted">
+          <StoreImage src={product.image} alt={product.nameFa} />
         </div>
         <CardContent className="p-3">
           <p className="font-medium text-sm line-clamp-1">{product.nameFa}</p>
@@ -116,7 +110,7 @@ export default function ProductDetailPage() {
         // Load reviews
         try {
           const reviewsRes = await apiClient.getProductReviews(params.id as string)
-          setReviews(reviewsRes.reviews || [])
+          setReviews(Array.isArray(reviewsRes.reviews) ? (reviewsRes.reviews as Review[]) : [])
         } catch {
           setReviews([])
         }
@@ -433,54 +427,7 @@ export default function ProductDetailPage() {
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              {reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="border-b last:border-0 pb-6 last:pb-0">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-primary font-medium">
-                              {review.user?.firstName?.[0] || "ک"}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium">
-                              {review.user?.firstName} {review.user?.lastName}
-                            </p>
-                            <div className="flex items-center gap-1">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star 
-                                  key={i} 
-                                  className={`h-3 w-3 ${i < review.rating 
-                                    ? "fill-amber-400 text-amber-400" 
-                                    : "text-muted-foreground/30"}`} 
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleDateString('fa-IR')}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground">{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">هنوز نظری ثبت نشده است</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    اولین نفری باشید که نظر می‌دهد
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {product && <ReviewsSection productId={product.id} />}
         </TabsContent>
       </Tabs>
 

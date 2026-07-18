@@ -26,10 +26,13 @@ export function NotificationButton() {
     if (!isAuthenticated) return
     try {
       const res = await apiClient.getNotifications()
-      setNotifications(res.notifications)
-      setUnreadCount(res.notifications.filter((n: any) => !n.isRead).length)
+      const list = Array.isArray(res.notifications) ? res.notifications : []
+      setNotifications(list)
+      setUnreadCount(list.filter((n: any) => !n.isRead).length)
     } catch (error) {
       console.error("Error loading notifications", error)
+      setNotifications([])
+      setUnreadCount(0)
     }
   }
 
