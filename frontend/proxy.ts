@@ -1,18 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { jwtVerify } from "jose"
-
-async function verifyJwtPayload(token: string): Promise<{ role?: string; id?: string } | null> {
-  const secret = process.env.JWT_SECRET
-  if (!secret) return null
-
-  try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
-    return payload as { role?: string; id?: string }
-  } catch {
-    return null
-  }
-}
+import { verifySessionToken } from "@/lib/auth-server"
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
@@ -23,8 +11,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
 
-    const payload = await verifyJwtPayload(token)
-    if (!payload || payload.role !== "ADMIN") {
+    const session = await verifySessionToken(token)
+    if (!session?.sub || session.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/", request.url))
     }
 
@@ -41,8 +29,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
 
-    const payload = await verifyJwtPayload(token)
-    if (!payload?.id) {
+    const session = await verifySessionToken(token)
+    if (!session?.sub) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
 

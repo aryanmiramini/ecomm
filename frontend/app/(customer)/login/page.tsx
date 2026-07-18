@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/components/auth/auth-provider"
 import { apiClient } from "@/lib/api-client"
 import { sanitizeRedirectPath } from "@/lib/auth-server"
+import { isOtpEnabled, isPasswordResetEnabled } from "@/lib/feature-flags"
 
 function LoginContent() {
   const router = useRouter()
@@ -28,6 +29,8 @@ function LoginContent() {
   const [otpSent, setOtpSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const isLoggingIn = useRef(false)
+  const otpEnabled = isOtpEnabled()
+  const passwordResetEnabled = isPasswordResetEnabled()
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && !isLoggingIn.current) {
@@ -129,10 +132,12 @@ function LoginContent() {
         <Card className="border-0 shadow-xl shadow-primary/5">
           <CardContent className="pt-6">
             <Tabs defaultValue="email" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="email">ایمیل</TabsTrigger>
-                <TabsTrigger value="phone">موبایل</TabsTrigger>
-              </TabsList>
+              {otpEnabled ? (
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="email">ایمیل</TabsTrigger>
+                  <TabsTrigger value="phone">موبایل</TabsTrigger>
+                </TabsList>
+              ) : null}
 
               <TabsContent value="email">
                 <form onSubmit={handleEmailSubmit} className="space-y-5">
@@ -156,9 +161,11 @@ function LoginContent() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">رمز عبور</Label>
-                      <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                        فراموشی رمز عبور؟
-                      </Link>
+                      {passwordResetEnabled ? (
+                        <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                          فراموشی رمز عبور؟
+                        </Link>
+                      ) : null}
                     </div>
                     <div className="relative">
                       <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -188,6 +195,7 @@ function LoginContent() {
                 </form>
               </TabsContent>
 
+              {otpEnabled ? (
               <TabsContent value="phone">
                 <form onSubmit={handleVerifyOtp} className="space-y-5">
                   <div className="space-y-2">
@@ -236,6 +244,7 @@ function LoginContent() {
                   )}
                 </form>
               </TabsContent>
+              ) : null}
             </Tabs>
 
             <div className="text-center text-sm mt-6">

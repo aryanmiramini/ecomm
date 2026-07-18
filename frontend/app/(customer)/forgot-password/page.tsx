@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
+import { isPasswordResetEnabled } from "@/lib/feature-flags"
 
 export default function ForgotPasswordPage() {
+  const passwordResetEnabled = isPasswordResetEnabled()
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [devToken, setDevToken] = useState<string | null>(null)
@@ -40,6 +42,26 @@ export default function ForgotPasswordPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!passwordResetEnabled) {
+    return (
+      <div className="container mx-auto flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">بازیابی رمز عبور</CardTitle>
+            <CardDescription>
+              این قابلیت فعلاً فعال نیست. برای تغییر رمز عبور با پشتیبانی تماس بگیرید.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/login">بازگشت به ورود</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   if (devToken) {

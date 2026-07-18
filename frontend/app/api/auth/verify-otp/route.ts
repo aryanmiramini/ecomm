@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { getAuthCookieOptions } from "@/lib/auth-cookie"
 import { backendFetch, BackendRequestError } from "@/lib/server-api"
 
 export async function POST(request: NextRequest) {
@@ -11,13 +12,7 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json(data)
     if (data.access_token) {
-      response.cookies.set("access_token", data.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24,
-        path: "/",
-      })
+      response.cookies.set("access_token", data.access_token, getAuthCookieOptions())
     }
     return response
   } catch (error: any) {

@@ -15,6 +15,13 @@ import { apiClient } from "@/lib/api-client"
 import { estimateOrderPricing } from "@/lib/order-pricing"
 import { toast } from "sonner"
 
+function formatShippingAddress(address: string, city: string, postalCode: string): string {
+  const parts = [address.trim()]
+  if (city.trim()) parts.push(`شهر: ${city.trim()}`)
+  if (postalCode.trim()) parts.push(`کد پستی: ${postalCode.trim()}`)
+  return parts.join(" — ")
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, clear } = useCart()
@@ -92,14 +99,20 @@ export default function CheckoutPage() {
     submittingRef.current = true
     setLoading(true)
     try {
+      const fullShippingAddress = formatShippingAddress(
+        formData.shippingAddress,
+        formData.city,
+        formData.postalCode,
+      )
+
       const createdOrder = await apiClient.createOrder(
         {
           items: cart.items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
           })),
-          shippingAddress: formData.shippingAddress,
-          billingAddress: formData.shippingAddress,
+          shippingAddress: fullShippingAddress,
+          billingAddress: fullShippingAddress,
           shippingFirstName: formData.firstName,
           shippingLastName: formData.lastName,
           shippingPhone: formData.phone,

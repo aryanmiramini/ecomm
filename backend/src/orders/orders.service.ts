@@ -9,12 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { SAFE_USER_SELECT } from '../common/user.select';
 import { calculateOrderPricing } from '../common/order-pricing';
 
-const PAID_ORDER_STATUSES: OrderStatus[] = [
-  OrderStatus.CONFIRMED,
-  OrderStatus.PAID,
-  OrderStatus.SHIPPED,
-  OrderStatus.DELIVERED,
-];
+const PAYMENT_COMPLETED_STATUSES: OrderStatus[] = [OrderStatus.PAID, OrderStatus.DELIVERED];
 
 @Injectable()
 export class OrdersService {
@@ -218,7 +213,7 @@ export class OrdersService {
     if (updateOrderStatusDto.adminNotes) data.adminNotes = updateOrderStatusDto.adminNotes;
     if (updateOrderStatusDto.status === OrderStatus.DELIVERED) data.deliveredAt = new Date();
 
-    if (PAID_ORDER_STATUSES.includes(updateOrderStatusDto.status)) {
+    if (PAYMENT_COMPLETED_STATUSES.includes(updateOrderStatusDto.status)) {
       data.paymentStatus = PaymentStatus.COMPLETED;
       if (!existing.paidAt) data.paidAt = new Date();
     }
@@ -324,7 +319,13 @@ export class OrdersService {
       this.prisma.order.count(),
       this.prisma.order.count({ where: { status: OrderStatus.PENDING } }),
       this.prisma.order.count({ where: { status: OrderStatus.DELIVERED } }),
-      this.prisma.order.aggregate({ _sum: { total: true } }),
+      this.prisma.order.aggregate({
+        _sum: { total: true },
+        where: {
+          paymentStatus: PaymentStatus.COMPLETED,
+          status: { not: OrderStatus.CANCELLED },
+        },
+      }),
     ]);
     return {
       totalOrders,
