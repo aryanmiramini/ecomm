@@ -325,6 +325,16 @@ export class UsersService {
 
     await this.findOneById(id);
 
+    const orderCount = await this.prisma.order.count({ where: { userId: id } });
+
+    if (orderCount > 0) {
+      await this.prisma.user.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      return { deleted: false, deactivated: true };
+    }
+
     await this.prisma.user.delete({ where: { id } });
 
     return { deleted: true };

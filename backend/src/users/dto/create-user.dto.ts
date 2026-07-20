@@ -1,4 +1,4 @@
-import { IsEmail, MinLength, IsOptional, IsString, IsNotEmpty } from 'class-validator';
+import { IsEmail, MinLength, IsOptional, IsString, IsNotEmpty, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -7,8 +7,9 @@ export class CreateUserDto {
   @IsOptional()
   email?: string;
 
-  @ApiPropertyOptional({ example: 'password123', description: 'User password (optional for SMS auth)', minLength: 6 })
-  @IsOptional()
+  @ApiProperty({ example: 'password123', description: 'User password (required for email registration)', minLength: 6 })
+  @ValidateIf((o) => Boolean(o.email))
+  @IsNotEmpty({ message: 'Password is required when registering with email' })
   @MinLength(6)
   password?: string;
 

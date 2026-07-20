@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError, coerceArray, unwrapNestData } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, coerceArray, formatBffError, unwrapNestData } from "@/lib/server-api"
 
 // GET all orders
 export async function GET(request: NextRequest) {
@@ -16,11 +16,12 @@ export async function GET(request: NextRequest) {
       page: response?.page || 1,
       limit: response?.limit || 10,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message, messageFa } = formatBffError(error, "خطا در دریافت سفارشات")
     return NextResponse.json(
       { 
-        message: error?.message || "خطا در دریافت سفارشات", 
-        messageFa: "خطا در دریافت سفارشات",
+        message,
+        messageFa,
         success: false,
         data: [],
       },
@@ -45,11 +46,12 @@ export async function POST(request: NextRequest) {
     }, { requireAuth: true })
     const data = unwrapNestData(raw)
     return NextResponse.json({ success: true, data }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message, messageFa } = formatBffError(error, "خطا در ثبت سفارش")
     return NextResponse.json(
       { 
-        message: error?.message || "خطا در ثبت سفارش", 
-        messageFa: "خطا در ثبت سفارش",
+        message,
+        messageFa,
         success: false 
       },
       { status: error instanceof BackendRequestError ? error.status : 500 },

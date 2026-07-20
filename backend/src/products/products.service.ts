@@ -242,37 +242,50 @@ export class ProductsService {
 
   async removeProduct(id: string) {
     try {
-      // Check product exists
-      const product = await this.prisma.product.findUnique({ 
-        where: { id } 
+      const product = await this.prisma.product.findUnique({
+        where: { id },
       });
-      
+
       if (!product) {
         throw new NotFoundException('PRODUCT');
       }
 
-      // Check if product is in any active orders
+      const hasOrderHistory = await this.prisma.orderItem.findFirst({
+        where: { productId: id },
+      });
+
+      if (hasOrderHistory) {
+        await this.prisma.product.update({
+          where: { id },
+          data: { isActive: false },
+        });
+        return { deleted: false, deactivated: true };
+      }
+
       const activeOrders = await this.prisma.orderItem.findFirst({
         where: {
           productId: id,
           order: {
             status: {
-              in: ['PENDING', 'PROCESSING', 'SHIPPED']
-            }
-          }
-        }
+              in: ['PENDING', 'PROCESSING', 'CONFIRMED', 'PAID', 'SHIPPED'],
+            },
+          },
+        },
       });
 
       if (activeOrders) {
-        throw new BusinessException('ORDER_CANNOT_BE_CANCELLED');
+        throw new BusinessException('PRODUCT_IN_ACTIVE_ORDER');
       }
 
       await this.prisma.product.delete({ where: { id } });
-      
+
       return { deleted: true };
     } catch (error) {
       if (error instanceof BusinessException) {
         throw error;
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new BusinessException('PRODUCT_HAS_ORDER_HISTORY');
       }
       throw new BusinessException('DATABASE_ERROR');
     }

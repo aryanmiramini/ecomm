@@ -89,3 +89,25 @@ export async function backendFetch<T>(
 
 export { BackendRequestError }
 
+export function formatBffError(
+  error: unknown,
+  fallbackFa: string,
+): { message: string; messageFa: string } {
+  if (error instanceof BackendRequestError) {
+    const payload = error.payload as Record<string, unknown> | undefined
+    const messageFa =
+      coerceMessage(payload?.messageFa) ||
+      coerceMessage(error.message) ||
+      coerceMessage(payload?.message) ||
+      fallbackFa
+    const message =
+      coerceMessage(payload?.messageEn) ||
+      coerceMessage(payload?.message) ||
+      error.message ||
+      fallbackFa
+    return { message, messageFa }
+  }
+  const message = error instanceof Error ? error.message : fallbackFa
+  return { message, messageFa: message || fallbackFa }
+}
+

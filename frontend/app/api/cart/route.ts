@@ -1,14 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { backendFetch, BackendRequestError, unwrapNestData } from "@/lib/server-api"
+import { backendFetch, BackendRequestError, formatBffError, unwrapNestData } from "@/lib/server-api"
 
 export async function GET() {
   try {
     const raw = await backendFetch("/cart/summary", {}, { requireAuth: true })
     const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message, messageFa } = formatBffError(error, "خطا در دریافت سبد خرید")
     return NextResponse.json(
-      { message: error?.message || "خطا در دریافت سبد خرید", success: false },
+      { message, messageFa, success: false },
       { status: error instanceof BackendRequestError ? error.status : 500 },
     )
   }
@@ -27,9 +28,10 @@ export async function POST(request: NextRequest) {
     )
     const data = unwrapNestData(raw)
     return NextResponse.json({ data, success: true }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message, messageFa } = formatBffError(error, "خطا در افزودن به سبد خرید")
     return NextResponse.json(
-      { message: error?.message || "خطا در افزودن به سبد خرید", success: false },
+      { message, messageFa, success: false },
       { status: error instanceof BackendRequestError ? error.status : 500 },
     )
   }

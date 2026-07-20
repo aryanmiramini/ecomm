@@ -124,6 +124,21 @@ export const ERROR_MESSAGES: Record<string, ErrorMessage> = {
     en: 'Order cannot be cancelled',
     fa: 'امکان لغو سفارش وجود ندارد',
   },
+  ORDER_DELETE_FORBIDDEN: {
+    code: 'ORDER_DELETE_FORBIDDEN',
+    en: 'Only cancelled orders can be deleted',
+    fa: 'فقط سفارش‌های لغوشده قابل حذف هستند',
+  },
+  PRODUCT_HAS_ORDER_HISTORY: {
+    code: 'PRODUCT_HAS_ORDER_HISTORY',
+    en: 'Product has order history and cannot be deleted',
+    fa: 'این محصول سابقه سفارش دارد و قابل حذف نیست',
+  },
+  PRODUCT_IN_ACTIVE_ORDER: {
+    code: 'PRODUCT_IN_ACTIVE_ORDER',
+    en: 'Product is in an active order',
+    fa: 'این محصول در سفارش فعال است',
+  },
   REVIEW_ALREADY_EXISTS: {
     code: 'REVIEW_ALREADY_EXISTS',
     en: 'You have already reviewed this product',

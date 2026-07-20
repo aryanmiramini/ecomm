@@ -11,6 +11,20 @@ import { calculateOrderPricing } from '../common/order-pricing';
 
 const PAYMENT_COMPLETED_STATUSES: OrderStatus[] = [OrderStatus.PAID, OrderStatus.DELIVERED];
 
+const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.PAID, OrderStatus.CANCELLED],
+  [OrderStatus.PROCESSING]: [OrderStatus.CONFIRMED, OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+  [OrderStatus.CONFIRMED]: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+  [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+  [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.RETURNED],
+  [OrderStatus.DELIVERED]: [OrderStatus.RETURNED, OrderStatus.REFUNDED],
+  [OrderStatus.CANCELLED]: [],
+  [OrderStatus.RETURNED]: [OrderStatus.REFUNDED],
+  [OrderStatus.REFUNDED]: [],
+};
+
+const NON_CANCELLABLE_STATUSES: OrderStatus[] = [OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.RETURNED, OrderStatus.REFUNDED];
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -197,6 +211,16 @@ export class OrdersService {
     });
   }
 
+  private assertValidStatusTransition(current: OrderStatus, next: OrderStatus): void {
+    if (current === next) {
+      return;
+    }
+    const allowed = ALLOWED_STATUS_TRANSITIONS[current] ?? [];
+    if (!allowed.includes(next)) {
+      throw new BadRequestException(`Invalid status transition from ${current} to ${next}`);
+    }
+  }
+
   async updateOrderStatus(id: string, updateOrderStatusDto: UpdateOrderStatusDto): Promise<any> {
     const existing = await this.prisma.order.findUnique({
       where: { id },
@@ -206,25 +230,71 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    const data: any = { status: updateOrderStatusDto.status };
+    const nextStatus = updateOrderStatusDto.status;
+    this.assertValidStatusTransition(existing.status, nextStatus);
+
+    const isCancelling =
+      nextStatus === OrderStatus.CANCELLED && existing.status !== OrderStatus.CANCELLED;
+
+    if (isCancelling) {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const result = await tx.order.updateMany({
+          where: {
+            id,
+            status: { notIn: [OrderStatus.CANCELLED, ...NON_CANCELLABLE_STATUSES] },
+          },
+          data: {
+            status: OrderStatus.CANCELLED,
+            cancelledAt: new Date(),
+            paymentStatus: PaymentStatus.FAILED,
+          },
+        });
+
+        if (result.count === 0) {
+          throw new BadRequestException('Order cannot be cancelled in its current status');
+        }
+
+        for (const item of existing.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { quantity: { increment: item.quantity } },
+          });
+        }
+
+        const data: any = {};
+        if (updateOrderStatusDto.trackingNumber) data.trackingNumber = updateOrderStatusDto.trackingNumber;
+        if (updateOrderStatusDto.carrier) data.carrier = updateOrderStatusDto.carrier;
+        if (updateOrderStatusDto.trackingUrl) data.trackingUrl = updateOrderStatusDto.trackingUrl;
+        if (updateOrderStatusDto.adminNotes) data.adminNotes = updateOrderStatusDto.adminNotes;
+
+        if (Object.keys(data).length > 0) {
+          return tx.order.update({ where: { id }, data });
+        }
+
+        return tx.order.findUnique({ where: { id } });
+      });
+
+      if (updated) {
+        await this.notificationsService.createNotification(
+          updated.userId,
+          'Order Cancelled',
+          `Order #${updated.orderNumber || updated.id} has been cancelled.`,
+        );
+      }
+
+      return updated;
+    }
+
+    const data: any = { status: nextStatus };
     if (updateOrderStatusDto.trackingNumber) data.trackingNumber = updateOrderStatusDto.trackingNumber;
     if (updateOrderStatusDto.carrier) data.carrier = updateOrderStatusDto.carrier;
     if (updateOrderStatusDto.trackingUrl) data.trackingUrl = updateOrderStatusDto.trackingUrl;
     if (updateOrderStatusDto.adminNotes) data.adminNotes = updateOrderStatusDto.adminNotes;
-    if (updateOrderStatusDto.status === OrderStatus.DELIVERED) data.deliveredAt = new Date();
+    if (nextStatus === OrderStatus.DELIVERED) data.deliveredAt = new Date();
 
-    if (PAYMENT_COMPLETED_STATUSES.includes(updateOrderStatusDto.status)) {
+    if (PAYMENT_COMPLETED_STATUSES.includes(nextStatus)) {
       data.paymentStatus = PaymentStatus.COMPLETED;
       if (!existing.paidAt) data.paidAt = new Date();
-    }
-
-    if (
-      updateOrderStatusDto.status === OrderStatus.CANCELLED &&
-      existing.status !== OrderStatus.CANCELLED
-    ) {
-      await this.restockOrderItems(existing.items);
-      data.cancelledAt = new Date();
-      data.paymentStatus = PaymentStatus.FAILED;
     }
 
     const updated = await this.prisma.order.update({ where: { id }, data });
@@ -241,24 +311,9 @@ export class OrdersService {
         'Order Delivered',
         `Order #${updated.orderNumber || updated.id} has been delivered. Enjoy your purchase!`,
       );
-    } else if (updated.status === OrderStatus.CANCELLED) {
-      await this.notificationsService.createNotification(
-        updated.userId,
-        'Order Cancelled',
-        `Order #${updated.orderNumber || updated.id} has been cancelled.`,
-      );
     }
 
     return updated;
-  }
-
-  private async restockOrderItems(items: Array<{ productId: string; quantity: number }>) {
-    for (const item of items) {
-      await this.prisma.product.update({
-        where: { id: item.productId },
-        data: { quantity: { increment: item.quantity } },
-      });
-    }
   }
 
   async cancelOrder(id: string, userId?: string): Promise<any> {
@@ -268,15 +323,31 @@ export class OrdersService {
       throw new BadRequestException('You can only cancel your own orders');
     }
 
-    if (order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) {
-      throw new BadRequestException('Cannot cancel shipped or delivered orders');
-    }
-
     if (order.status === OrderStatus.CANCELLED) {
       return order;
     }
 
+    if (NON_CANCELLABLE_STATUSES.includes(order.status)) {
+      throw new BadRequestException('Cannot cancel shipped or delivered orders');
+    }
+
     const cancelled = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.order.updateMany({
+        where: {
+          id,
+          status: { notIn: [OrderStatus.CANCELLED, ...NON_CANCELLABLE_STATUSES] },
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          cancelledAt: new Date(),
+          paymentStatus: PaymentStatus.FAILED,
+        },
+      });
+
+      if (result.count === 0) {
+        throw new BadRequestException('Order cannot be cancelled in its current status');
+      }
+
       for (const item of order.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -284,21 +355,16 @@ export class OrdersService {
         });
       }
 
-      return tx.order.update({
-        where: { id },
-        data: {
-          status: OrderStatus.CANCELLED,
-          cancelledAt: new Date(),
-          paymentStatus: PaymentStatus.FAILED,
-        },
-      });
+      return tx.order.findUnique({ where: { id } });
     });
 
-    await this.notificationsService.createNotification(
-      cancelled.userId,
-      'Order Cancelled',
-      `Order #${cancelled.orderNumber || cancelled.id} has been cancelled.`,
-    );
+    if (cancelled) {
+      await this.notificationsService.createNotification(
+        cancelled.userId,
+        'Order Cancelled',
+        `Order #${cancelled.orderNumber || cancelled.id} has been cancelled.`,
+      );
+    }
 
     return cancelled;
   }
@@ -307,7 +373,7 @@ export class OrdersService {
     const order = await this.findOrderById(id);
 
     if (order.status !== OrderStatus.CANCELLED) {
-      await this.restockOrderItems(order.items);
+      throw new BadRequestException('Only cancelled orders can be deleted');
     }
 
     await this.prisma.order.delete({ where: { id } });

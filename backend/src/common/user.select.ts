@@ -18,3 +18,10 @@ export const SAFE_USER_SELECT = {
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.UserSelect;
+
+export const PUBLIC_REVIEWER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  avatar: true,
+} satisfies Prisma.UserSelect;

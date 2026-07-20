@@ -5,7 +5,7 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 import { UsersService } from '../users/users.service';
 import { ProductsService } from '../products/products.service';
 import { OrderStatus } from '@prisma/client';
-import { SAFE_USER_SELECT } from '../common/user.select';
+import { PUBLIC_REVIEWER_SELECT } from '../common/user.select';
 
 @Injectable()
 export class ReviewsService {
@@ -109,7 +109,7 @@ export class ReviewsService {
 
     return this.prisma.review.findMany({
       where: { productId },
-      include: { user: { select: SAFE_USER_SELECT } },
+      include: { user: { select: PUBLIC_REVIEWER_SELECT } },
       orderBy: { createdAt: 'desc' },
     });
   }

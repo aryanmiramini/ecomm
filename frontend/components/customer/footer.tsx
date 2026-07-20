@@ -1,12 +1,12 @@
 import Link from "next/link"
-import { Facebook, Instagram, Twitter, Phone, Mail, MapPin, ShoppingBag, Shield } from "lucide-react"
+import { Instagram, Phone, Mail, MapPin, ShoppingBag } from "lucide-react"
+import { storeConfig } from "@/lib/store-config"
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-muted/30 mt-16">
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {/* Brand Section */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
@@ -15,9 +15,8 @@ export function Footer() {
               <span className="text-lg font-bold text-foreground">فروشگاه آنلاین</span>
             </Link>
             <p className="text-sm leading-relaxed text-muted-foreground mb-4">
-              فروشگاه آنلاین ما با ارائه بهترین محصولات و خدمات، همواره در کنار شما عزیزان است. تجربه خریدی مطمئن و لذت‌بخش را با ما داشته باشید.
+              فروشگاه آنلاین ما با ارائه بهترین محصولات و خدمات، همواره در کنار شما عزیزان است.
             </p>
-            {/* Social Links */}
             <div className="flex gap-2">
               <a
                 href="#"
@@ -26,24 +25,9 @@ export function Footer() {
               >
                 <Instagram className="h-4 w-4" />
               </a>
-              <a
-                href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-4 w-4" />
-              </a>
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
             <h3 className="mb-4 text-sm font-semibold text-foreground">دسترسی سریع</h3>
             <ul className="space-y-3 text-sm">
@@ -75,7 +59,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Customer Service */}
           <div>
             <h3 className="mb-4 text-sm font-semibold text-foreground">خدمات مشتریان</h3>
             <ul className="space-y-3 text-sm">
@@ -107,7 +90,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Contact Info */}
           <div>
             <h3 className="mb-4 text-sm font-semibold text-foreground">تماس با ما</h3>
             <ul className="space-y-3 text-sm">
@@ -117,7 +99,7 @@ export function Footer() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">تلفن پشتیبانی</p>
-                  <p className="font-medium text-foreground" dir="ltr">021-12345678</p>
+                  <p className="font-medium text-foreground" dir="ltr">{storeConfig.phone}</p>
                 </div>
               </li>
               <li className="flex items-center gap-3 text-muted-foreground">
@@ -126,7 +108,7 @@ export function Footer() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">ایمیل</p>
-                  <p className="font-medium text-foreground" dir="ltr">info@example.com</p>
+                  <p className="font-medium text-foreground" dir="ltr">{storeConfig.email}</p>
                 </div>
               </li>
               <li className="flex items-start gap-3 text-muted-foreground">
@@ -135,34 +117,17 @@ export function Footer() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">آدرس</p>
-                  <p className="font-medium text-foreground text-sm">تهران، خیابان ولیعصر</p>
+                  <p className="font-medium text-foreground text-sm">{storeConfig.address}</p>
                 </div>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom Bar */}
         <div className="mt-10 pt-8 border-t border-border">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground text-center md:text-right">
-              © {new Date().getFullYear()} فروشگاه آنلاین. تمامی حقوق محفوظ است.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center border border-border">
-                <div className="text-center">
-                  <Shield className="h-5 w-5 mx-auto text-primary/60" />
-                  <span className="text-[8px] text-muted-foreground">اعتماد</span>
-                </div>
-              </div>
-              <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center border border-border">
-                <div className="text-center">
-                  <Shield className="h-5 w-5 mx-auto text-primary/60" />
-                  <span className="text-[8px] text-muted-foreground">ساماندهی</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-muted-foreground text-center md:text-right">
+            © {new Date().getFullYear()} فروشگاه آنلاین. تمامی حقوق محفوظ است.
+          </p>
         </div>
       </div>
     </footer>

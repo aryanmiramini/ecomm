@@ -123,7 +123,11 @@ export default function CheckoutPage() {
         idempotencyKeyRef.current,
       )
       toast.success("سفارش با موفقیت ثبت شد")
-      await clear()
+      try {
+        await clear()
+      } catch {
+        // Order was created; cart clear failure should not block success flow.
+      }
       const orderId = createdOrder?.id || ""
       const orderNumber = createdOrder?.orderNumber || ""
       const query = new URLSearchParams()

@@ -89,9 +89,6 @@ function LoginContent() {
       const data = await apiClient.requestOtp(phone.trim())
       setOtpSent(true)
       toast.success(data.message || "کد ارسال شد")
-      if (data.code) {
-        toast.message(`کد توسعه: ${data.code}`)
-      }
     } catch (error: any) {
       toast.error(error.message || "خطا در ارسال کد")
     } finally {

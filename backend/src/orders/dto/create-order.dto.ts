@@ -23,6 +23,12 @@ export class OrderItemDto {
   quantity: number;
 }
 
+export enum PaymentMethod {
+  CASH = 'cash',
+  POS = 'pos',
+  BANK_TRANSFER = 'bank_transfer',
+}
+
 export class CreateOrderDto {
   @ApiProperty({ 
     type: [OrderItemDto],
@@ -99,12 +105,13 @@ export class CreateOrderDto {
 
   @ApiPropertyOptional({ 
     example: 'cash', 
-    description: 'Payment method (e.g., cash, pos, bank_transfer)',
-    enum: ['cash', 'pos', 'bank_transfer']
+    description: 'Payment method (cash, pos, bank_transfer)',
+    enum: PaymentMethod,
+    default: PaymentMethod.CASH,
   })
   @IsOptional()
-  @IsString()
-  paymentMethod?: string;
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
 
   @ApiPropertyOptional({ 
     example: 'Please leave at front door', 

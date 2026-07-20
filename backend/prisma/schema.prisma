@@ -248,7 +248,7 @@ model Order {
 
   // Foreign Keys
   userId                  String          @db.Uuid
-  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                    User            @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   // Relations
   items                   OrderItem[]
@@ -273,7 +273,7 @@ model OrderItem {
   order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   
   productId           String   @db.Uuid
-  product             Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product             Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([productId])
