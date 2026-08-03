@@ -301,7 +301,6 @@ model Cart {
   items       CartItem[]
 
   @@unique([userId])
-  @@index([userId])
   @@map("carts")
 }
 
